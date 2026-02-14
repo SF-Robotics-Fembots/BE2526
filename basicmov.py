@@ -18,10 +18,12 @@ try:
         # Turn the relay on to turn on the pump
         GPIO.output(RELAY_PIN, GPIO.HIGH)
         time.sleep(5)
-
+        print("Turning on")
+        
         # Turn the relay off to turn off the pump
         GPIO.output(RELAY_PIN, GPIO.LOW)
         time.sleep(5)
+        print("Turning off")
 
 except KeyboardInterrupt:
     #press Ctrl+C, clean up the config
