@@ -16,14 +16,16 @@ try:
     # Run the loop function forever
     while True:
         # Turn the relay on to turn on the pump
+        print("Turning on")
         GPIO.output(RELAY_PIN, GPIO.HIGH)
         time.sleep(5)
-        print("Turning on")
+        
         
         # Turn the relay off to turn off the pump
+        print("Turning off")
         GPIO.output(RELAY_PIN, GPIO.LOW)
         time.sleep(5)
-        print("Turning off")
+        
 
 except KeyboardInterrupt:
     #press Ctrl+C, clean up the config
