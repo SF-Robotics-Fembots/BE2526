@@ -8,12 +8,13 @@ GPIO.setmode(GPIO.BCM)
 
 # Define the GPIO pin controls the pump via the relay module
 RELAY_PIN = 5
-
+RELAY_PIN2 = 6
 # Set the relay pin as an output pin
 GPIO.setup(RELAY_PIN, GPIO.OUT)
 
 try:
     # Run the loop function forever
+    GPIO.output(RELAY_PIN2, GPIO.LOW)
     while True:
         # Turn the relay on to turn on the pump
         print("Turning on")
