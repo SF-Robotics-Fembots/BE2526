@@ -2,7 +2,6 @@ import RPi.GPIO as GPIO
 import time
 
 # GPIO setup
-GPIO.setmode(GPIO.BCM)
 
 # Define pump control pins
 PUMP_IN_PIN = 17   # GPIO pin to pump fluid into the chamber
