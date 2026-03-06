@@ -1,6 +1,9 @@
 import RPi.GPIO as GPIO
 import time
 
+#This code is way to test for connections for speifically gpio 5 and 6
+#Tests the electrical connections to see if they are working the way it needs to
+
 # Set the GPIO mode (BOARD)
 GPIO.setmode(GPIO.BCM)
 
