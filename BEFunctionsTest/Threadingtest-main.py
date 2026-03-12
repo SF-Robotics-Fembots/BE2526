@@ -5,6 +5,8 @@ from datetime import datetime
 logging_enabled = False
 exit_flag = False
 
+open("Thread-log.txt", "w").close()
+
 def logger_thread():
     while not exit_flag:
         if logging_enabled:
