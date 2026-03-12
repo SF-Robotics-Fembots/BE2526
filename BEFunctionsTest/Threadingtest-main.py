@@ -8,7 +8,7 @@ exit_flag = False
 def logger_thread():
     while not exit_flag:
         if logging_enabled:
-            with open("log.txt", "a") as f:
+            with open("Thread-log.txt", "a") as f:
                 f.write(datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\n")
         time.sleep(3)
 
