@@ -55,7 +55,7 @@ while True:
     except:
         print("                 ***FAILED READING***")
         continue
-    
+
 
     # calculate speed
     actual_speed = (previous_depth - current_depth)/cycle # cm/s
@@ -76,17 +76,18 @@ while True:
         if speed_offset > 0:  # too slow
             action = 2  # Water Out
         else:  # too fast
-            action = 1  # Water In    
+            action = 1  # Water In
 
-
-    pump(action)
-    
+    # Print logs to screen
     print("Current Depth:", current_depth)
     print("Actual Speed:", actual_speed, "cm/s")
     print("Depth Offset:", depth_offset)
     print("Action:", action)
 
+
     # TURN ON PUMP HERE BASED ON ACTION
+    pump(action)
+
 
     previous_depth = current_depth
 
