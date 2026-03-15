@@ -5,8 +5,8 @@ import time
 GPIO.setmode(GPIO.BCM)
 
 # Define the GPIO pin controls the pump via the relay module
-RELAY_PIN = 6
-RELAY_PIN2 = 5
+RELAY_PIN = 5
+RELAY_PIN2 = 6
 # Set the relay pin as an output pin
 GPIO.setup(RELAY_PIN2, GPIO.OUT)
 GPIO.setup(RELAY_PIN, GPIO.OUT)
@@ -16,18 +16,22 @@ try:
     GPIO.output(RELAY_PIN2, GPIO.LOW)
     GPIO.output(RELAY_PIN, GPIO.LOW)
     while True:
-        # Turn the relay on to turn on the pump
-        print("Turning on")
-        GPIO.output(RELAY_PIN, GPIO.HIGH)
-        GPIO.output(RELAY_PIN2, GPIO.LOW)
-        time.sleep(5)
-        
-        
+
         # Turn the relay off to turn off the pump
-        print("Turning off")
+        print("Pumping IN")
         GPIO.output(RELAY_PIN, GPIO.LOW)
         GPIO.output(RELAY_PIN2, GPIO.HIGH)
-        time.sleep(5)
+        time.sleep(60)
+
+
+
+        # Turn the relay on to turn on the pump
+        print("Pumping OUT")
+        GPIO.output(RELAY_PIN, GPIO.HIGH)
+        GPIO.output(RELAY_PIN2, GPIO.LOW)
+        time.sleep(60)
+        
+        
         
 
 except KeyboardInterrupt:
