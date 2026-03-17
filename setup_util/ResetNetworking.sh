@@ -103,6 +103,19 @@ EOF'
 sudo ip addr flush dev wlan0
 sudo ip addr add 10.42.0.1/24 dev wlan0
 sudo ip link set wlan0 up
+
+# Restart dhcpcd to apply static IP config
+sudo systemctl restart dhcpcd
+sleep 3
+
+# Ensure hostapd starts after dhcpcd on boot
+sudo mkdir -p /etc/systemd/system/hostapd.service.d/
+sudo bash -c 'cat > /etc/systemd/system/hostapd.service.d/override.conf << EOF
+[Unit]
+After=dhcpcd.service
+Requires=dhcpcd.service
+EOF'
+sudo systemctl daemon-reload
 echo ""
 
 # -----------------------------------------------
@@ -139,17 +152,14 @@ echo ""
 # -----------------------------------------------
 echo "[8/8] Enabling internet sharing..."
 
-# Enable IP forwarding
 sudo sysctl -w net.ipv4.ip_forward=1
 grep -q "net.ipv4.ip_forward=1" /etc/sysctl.conf || echo "net.ipv4.ip_forward=1" | sudo tee -a /etc/sysctl.conf
 
-# Set up NAT via nftables
 sudo nft flush ruleset
 sudo nft add table ip nat
 sudo nft add chain ip nat postrouting { type nat hook postrouting priority 100 \; }
 sudo nft add rule ip nat postrouting oifname "wlan1" masquerade
 
-# Save nftables rules so they persist across reboots
 sudo nft list ruleset | sudo tee /etc/nftables.conf > /dev/null
 sudo systemctl enable nftables
 echo ""
