@@ -89,33 +89,39 @@ echo ""
 # -----------------------------------------------
 echo "[6/8] Setting static IP on wlan0..."
 
-if grep -q "interface wlan0" /etc/dhcpcd.conf; then
-    sudo sed -i '/interface wlan0/{N;N;N;d}' /etc/dhcpcd.conf
-fi
+# Create a systemd service to set wlan0 IP on every boot
+sudo bash -c 'cat > /etc/systemd/system/wlan0-static-ip.service << EOF
+[Unit]
+Description=Set static IP on wlan0
+After=sys-subsystem-net-devices-wlan0.device
+Wants=sys-subsystem-net-devices-wlan0.device
 
-sudo bash -c 'cat >> /etc/dhcpcd.conf << EOF
+[Service]
+Type=oneshot
+ExecStart=/sbin/ip addr flush dev wlan0
+ExecStart=/sbin/ip addr add 10.42.0.1/24 dev wlan0
+ExecStart=/sbin/ip link set wlan0 up
+RemainAfterExit=yes
 
-interface wlan0
-static ip_address=10.42.0.1/24
-nohook wpa_supplicant
+[Install]
+WantedBy=multi-user.target
 EOF'
 
-sudo ip addr flush dev wlan0
-sudo ip addr add 10.42.0.1/24 dev wlan0
-sudo ip link set wlan0 up
-
-# Restart dhcpcd to apply static IP config
-sudo systemctl restart dhcpcd
-sleep 3
-
-# Ensure hostapd starts after dhcpcd on boot
+# Ensure hostapd waits for wlan0 IP to be set
 sudo mkdir -p /etc/systemd/system/hostapd.service.d/
 sudo bash -c 'cat > /etc/systemd/system/hostapd.service.d/override.conf << EOF
 [Unit]
-After=dhcpcd.service
-Requires=dhcpcd.service
+After=wlan0-static-ip.service
+Requires=wlan0-static-ip.service
 EOF'
+
 sudo systemctl daemon-reload
+sudo systemctl enable wlan0-static-ip.service
+
+# Set IP immediately for this session
+sudo ip addr flush dev wlan0
+sudo ip addr add 10.42.0.1/24 dev wlan0
+sudo ip link set wlan0 up
 echo ""
 
 # -----------------------------------------------

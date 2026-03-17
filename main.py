@@ -5,6 +5,14 @@ import smbus
 import RPi.GPIO as GPIO
 import datetime
 import threading
+import logging
+
+logging.basicConfig(
+    filename="buoy.log",
+    level=logging.INFO,
+    format="%(asctime)s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 print("Starting sensor")
 sensor = ms5837.MS5837_02BA()
@@ -98,11 +106,11 @@ try:
                 print("Water out")
                 action = 2  # Water out
 
-        # Print logs to screen
-        print("Current Depth:", current_depth)
-        print("Actual Speed:", actual_speed, "cm/s")
-        print("Depth Offset:", depth_offset)
-        print("Action:", action)
+        # Print logs to screen and file
+        msg = (f"depth={current_depth:.2f}cm  speed={actual_speed:.3f}cm/s  "
+               f"offset={depth_offset:.2f}cm  action={'WaterIn' if action==1 else 'WaterOut'}")
+        print(msg)
+        logging.info(msg)
 
 
         # TURN ON PUMP HERE BASED ON ACTION
