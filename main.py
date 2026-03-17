@@ -80,23 +80,23 @@ try:
         if depth_offset > 0:  # too low
             print("Depth too low")
             if speed_offset > 0:  # too 
-                print
-                print("Water in")
-                action = 1  # Water In
-            else:  # too fast
+                print("Speed too slow")
                 print("Water out")
+                action = 2  # Water out
+            else:  # too fast
+                print("Water in")
                 print("Speed too fast")
-                action = 2  # Water Out
+                action = 1  # Water In
         else:  # too high
             print("Depth too high")
             if speed_offset > 0:  # too slow
                 print("Speed too slow")
-                print("Water out")
-                action = 2  # Water Out
+                print("Water in")
+                action = 1  # Water in
             else:  # too fast
                 print("Speed too fast")
-                print("Water in")
-                action = 1  # Water In
+                print("Water out")
+                action = 2  # Water out
 
         # Print logs to screen
         print("Current Depth:", current_depth)
