@@ -9,10 +9,10 @@ import threading
 sensor = ms5837.MS5837_02BA()
 DEBUG = 1
 
-RELAY_PIN = 6
-RELAY_PIN2 = 5
+GPIO_IN = 5
+GPIO_OUT = 6
 # Set the relay pin as an output pin
-GPIO.setup(RELAY_PIN2, GPIO.OUT)
+GPIO.setup(GPIO_IN, GPIO.OUT)
 GPIO.setup(RELAY_PIN, GPIO.OUT)
 GPIO.output(RELAY_PIN2, GPIO.LOW)
 GPIO.output(RELAY_PIN, GPIO.LOW)
