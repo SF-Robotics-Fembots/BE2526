@@ -83,7 +83,7 @@ try:
 
         # check DepthCSV logic
         target_speed = DepthEval.get_speed(table, depth_offset)
-        speed_offset = target_speed - actual_speed
+        speed_offset = actual_speed - target_speed
 
         if depth_offset > 0:  # too low
             print("Depth too low")
@@ -108,7 +108,7 @@ try:
 
         # Print logs to screen and file
         msg = (f"depth={current_depth:.2f}cm  speed={actual_speed:.3f}cm/s  "
-               f"offset={depth_offset:.2f}cm  action={'WaterIn' if action==1 else 'WaterOut'}")
+               f"depth offset={depth_offset:.2f}cm speed_offset={speed_offset} action={'WaterIn' if action==1 else 'WaterOut'}")
         print(msg)
         logging.info(msg)
 
