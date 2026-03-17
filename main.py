@@ -11,6 +11,11 @@ DEBUG = 1
 
 GPIO_IN = 5
 GPIO_OUT = 6
+
+# Set the GPIO mode (BOARD)
+GPIO.setmode(GPIO.BCM)
+
+
 # Set the relay pin as an output pin
 GPIO.setup(GPIO_IN, GPIO.OUT)
 GPIO.setup(GPIO_OUT, GPIO.OUT)
