@@ -77,15 +77,19 @@ try:
         target_speed = DepthEval.get_speed(table, depth_offset)
         speed_offset = target_speed - actual_speed
 
-        if depth_offset > 0:  # too high
+        if depth_offset > 0:  # too low
             if speed_offset > 0:  # too slow
+                print("Water in")
                 action = 1  # Water In
             else:  # too fast
+                print("Water out")
                 action = 2  # Water Out
-        else:  # too low
+        else:  # too high
             if speed_offset > 0:  # too slow
+                print("Water out")
                 action = 2  # Water Out
             else:  # too fast
+                print("Water in")
                 action = 1  # Water In
 
         # Print logs to screen
