@@ -13,9 +13,9 @@ GPIO_IN = 5
 GPIO_OUT = 6
 # Set the relay pin as an output pin
 GPIO.setup(GPIO_IN, GPIO.OUT)
-GPIO.setup(RELAY_PIN, GPIO.OUT)
-GPIO.output(RELAY_PIN2, GPIO.LOW)
-GPIO.output(RELAY_PIN, GPIO.LOW)
+GPIO.setup(GPIO_OUT, GPIO.OUT)
+GPIO.output(GPIO_IN, GPIO.LOW)
+GPIO.output(GPIO_OUT, GPIO.LOW)
 
 def startup():
 #	print("prep to init")
@@ -28,11 +28,11 @@ def startup():
 
 def pump(direction):
     if direction == 1:  # Water In
-        GPIO.output(RELAY_PIN, GPIO.HIGH)
-        GPIO.output(RELAY_PIN2, GPIO.LOW)
+        GPIO.output(GPIO_IN, GPIO.HIGH)
+        GPIO.output(GPIO_OUT, GPIO.LOW)
     else:  # Water Out
-        GPIO.output(RELAY_PIN, GPIO.LOW)
-        GPIO.output(RELAY_PIN2, GPIO.HIGH)
+        GPIO.output(GPIO_IN, GPIO.LOW)
+        GPIO.output(GPIO_OUT, GPIO.HIGH)
 
 cycle=0.2 #seconds
 
