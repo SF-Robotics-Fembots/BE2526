@@ -69,7 +69,7 @@ while True:
     actual_speed = (previous_depth - current_depth)/cycle # cm/s
 
     # calculate offset
-    depth_offset = target_depth - current_depth # positive means too high, negative means too low
+    depth_offset = current_depth - target_depth # negative means too high, positive means too low
 
     # check DepthCSV logic
     target_speed = DepthEval.get_speed(table, depth_offset)
@@ -100,3 +100,8 @@ while True:
     previous_depth = current_depth
 
     time.sleep(cycle)
+
+
+except KeyboardInterrupt:
+    #press Ctrl+C, clean up the config
+    GPIO.cleanup()
