@@ -54,52 +54,54 @@ table = DepthEval.load_speed_table("speeds.csv")
 print(f"Loaded {len(table)} entries.")
 startup()
 
-while True:
-    print("Starting Main Loop")
-    #current_depth = float(input("Enter current depth in cm: ")) #should be updated automatically == will be MS5837 read
-    try:
-        sensor.read(ms5837.OSR_256)
-        current_depth = sensor.depth() * 100 # convert to cm
-    except:
-        print("                 ***FAILED READING***")
-        continue
+
+try:
+    while True:
+        print("Starting Main Loop")
+        #current_depth = float(input("Enter current depth in cm: ")) #should be updated automatically == will be MS5837 read
+        try:
+            sensor.read(ms5837.OSR_256)
+            current_depth = sensor.depth() * 100 # convert to cm
+        except:
+            print("                 ***FAILED READING***")
+            continue
 
 
-    # calculate speed
-    actual_speed = (previous_depth - current_depth)/cycle # cm/s
+        # calculate speed
+        actual_speed = (previous_depth - current_depth)/cycle # cm/s
 
-    # calculate offset
-    depth_offset = current_depth - target_depth # negative means too high, positive means too low
+        # calculate offset
+        depth_offset = current_depth - target_depth # negative means too high, positive means too low
 
-    # check DepthCSV logic
-    target_speed = DepthEval.get_speed(table, depth_offset)
-    speed_offset = target_speed - actual_speed
+        # check DepthCSV logic
+        target_speed = DepthEval.get_speed(table, depth_offset)
+        speed_offset = target_speed - actual_speed
 
-    if depth_offset > 0:  # too high
-        if speed_offset > 0:  # too slow
-            action = 1  # Water In
-        else:  # too fast
-            action = 2  # Water Out
-    else:  # too low
-        if speed_offset > 0:  # too slow
-            action = 2  # Water Out
-        else:  # too fast
-            action = 1  # Water In
+        if depth_offset > 0:  # too high
+            if speed_offset > 0:  # too slow
+                action = 1  # Water In
+            else:  # too fast
+                action = 2  # Water Out
+        else:  # too low
+            if speed_offset > 0:  # too slow
+                action = 2  # Water Out
+            else:  # too fast
+                action = 1  # Water In
 
-    # Print logs to screen
-    print("Current Depth:", current_depth)
-    print("Actual Speed:", actual_speed, "cm/s")
-    print("Depth Offset:", depth_offset)
-    print("Action:", action)
-
-
-    # TURN ON PUMP HERE BASED ON ACTION
-    pump(action)
+        # Print logs to screen
+        print("Current Depth:", current_depth)
+        print("Actual Speed:", actual_speed, "cm/s")
+        print("Depth Offset:", depth_offset)
+        print("Action:", action)
 
 
-    previous_depth = current_depth
+        # TURN ON PUMP HERE BASED ON ACTION
+        pump(action)
 
-    time.sleep(cycle)
+
+        previous_depth = current_depth
+
+        time.sleep(cycle)
 
 
 except KeyboardInterrupt:
