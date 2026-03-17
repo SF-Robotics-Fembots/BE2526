@@ -78,17 +78,23 @@ try:
         speed_offset = target_speed - actual_speed
 
         if depth_offset > 0:  # too low
-            if speed_offset > 0:  # too slow
+            print("Depth too low")
+            if speed_offset > 0:  # too 
+                print
                 print("Water in")
                 action = 1  # Water In
             else:  # too fast
                 print("Water out")
+                print("Speed too fast")
                 action = 2  # Water Out
         else:  # too high
+            print("Depth too high")
             if speed_offset > 0:  # too slow
+                print("Speed too slow")
                 print("Water out")
                 action = 2  # Water Out
             else:  # too fast
+                print("Speed too fast")
                 print("Water in")
                 action = 1  # Water In
 
