@@ -6,7 +6,10 @@ import RPi.GPIO as GPIO
 import datetime
 import threading
 
+print("Starting sensor")
 sensor = ms5837.MS5837_02BA()
+print("Sensor started")
+
 DEBUG = 1
 
 GPIO_IN = 5

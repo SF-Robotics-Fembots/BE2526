@@ -14,7 +14,7 @@ def load_speed_table(filename):
 
 def get_speed(table, depth_offset):
     offsets = [row[0] for row in table]
-    i = bisect.bisect_left(offsets, offset)
+    i = bisect.bisect_left(offsets, depth_offset)
     # Clamp to valid range
     if i >= len(table):
         return table[-1][1]
