@@ -38,7 +38,7 @@ def startup():
 	sensor.init()
 	time.sleep(1)
 #	print("prep to read")
-	sensor.read(ms5837.OSR_256)
+	sensor.read(ms5837.OSR_8192)
 #	print("prep to set density")
 	sensor.setFluidDensity(ms5837.DENSITY_FRESHWATER)
 
@@ -74,7 +74,7 @@ try:
         print("Starting Main Loop")
         #current_depth = float(input("Enter current depth in cm: ")) #should be updated automatically == will be MS5837 read
         try:
-            sensor.read(ms5837.OSR_256)
+            sensor.read(ms5837.OSR_8192)
             current_depth = sensor.depth() * 100 # convert to cm
         except:
             print("                 ***FAILED READING***")
