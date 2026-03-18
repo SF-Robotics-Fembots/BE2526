@@ -46,9 +46,15 @@ def pump(direction):
     if direction == 1:  # Water In
         GPIO.output(GPIO_IN, GPIO.HIGH)
         GPIO.output(GPIO_OUT, GPIO.LOW)
+        msg = (f"Water IN EXECUTION  ")
+        print(msg)
+        logging.info(msg)
     else:  # Water Out
         GPIO.output(GPIO_IN, GPIO.LOW)
         GPIO.output(GPIO_OUT, GPIO.HIGH)
+        msg = (f"Water OUT EXECUTION  ")
+        print(msg)
+        logging.info(msg)
 
 cycle=0.2 #seconds
 
@@ -76,7 +82,7 @@ try:
 
 
         # calculate speed
-        actual_speed = (previous_depth - current_depth)/cycle # cm/s
+        actual_speed = (current_depth - previous_depth) / cycle  # positive when sinking
 
         # calculate offset
         depth_offset = current_depth - target_depth # negative means too high, positive means too low
@@ -85,26 +91,26 @@ try:
         target_speed = DepthEval.get_speed(table, depth_offset)
         speed_offset = actual_speed - target_speed
 
-        if depth_offset > 0:  # too low
+        if depth_offset > 0:  # too deep, need to rise
             print("Depth too low")
-            if speed_offset > 0:  # too 
+            if speed_offset > 0:  # rising too slow
                 print("Speed too slow")
                 print("Water out")
                 action = 2  # Water out
-            else:  # too fast
-                print("Water in")
+            else:  # rising too fast
                 print("Speed too fast")
+                print("Water in")
                 action = 1  # Water In
-        else:  # too high
+        else:  # too high (too shallow, need to sink)
             print("Depth too high")
-            if speed_offset > 0:  # too slow
+            if speed_offset > 0:  # sinking too fast
+                print("Speed too fast")
+                print("Water out")
+                action = 2  # Water out
+            else:  # sinking too slow
                 print("Speed too slow")
                 print("Water in")
                 action = 1  # Water in
-            else:  # too fast
-                print("Speed too fast")
-                print("Water out")
-                action = 2  # Water out
 
         # Print logs to screen and file
         msg = (f"depth={current_depth:.2f}cm  speed={actual_speed:.3f}cm/s  "
