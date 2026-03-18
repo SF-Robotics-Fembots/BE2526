@@ -1,4 +1,7 @@
 import time
+import os
+import glob as globmod
+import shutil
 import DepthEval
 import ms5837
 import smbus
@@ -6,6 +9,14 @@ import RPi.GPIO as GPIO
 import datetime
 import threading
 import logging
+
+# Archive existing buoy.log to next numbered file
+if os.path.exists("buoy.log"):
+    existing = globmod.glob("buoy_*.log")
+    nums = [int(f.replace("buoy_", "").replace(".log", "")) for f in existing if f.replace("buoy_", "").replace(".log", "").isdigit()]
+    next_num = max(nums) + 1 if nums else 1
+    shutil.copy2("buoy.log", f"buoy_{next_num}.log")
+    open("buoy.log", "w").close()
 
 logging.basicConfig(
     filename="buoy.log",
@@ -60,11 +71,18 @@ cycle=0.2 #seconds
 
 time.sleep(2)
 
-
+speed_divisor = float(input("Enter speed divisor (e.g. 1 for normal, 2 for half speed): "))
+shallow_threshold = float(input("Enter shallow threshold in cm (e.g. 20): "))
+max_shallow_speed = float(input("Enter max shallow sink speed in cm/s (e.g. 0.1): "))
 target_depth = float(input("Enter target depth in cm: "))
+sensor.read(ms5837.OSR_8192)
+starting_sensor_depth = sensor.depth() * 100 # convert to cm 
+
+
 previous_depth = 0
 
 table = DepthEval.load_speed_table("speeds.csv")
+table = [(offset, speed / speed_divisor) for offset, speed in table]
 print(f"Loaded {len(table)} entries.")
 startup()
 
@@ -75,7 +93,7 @@ try:
         #current_depth = float(input("Enter current depth in cm: ")) #should be updated automatically == will be MS5837 read
         try:
             sensor.read(ms5837.OSR_8192)
-            current_depth = sensor.depth() * 100 # convert to cm
+            current_depth = sensor.depth() * 100 - starting_sensor_depth# convert to cm and adjust for the depth of the sensor on the robot
         except:
             print("                 ***FAILED READING***")
             continue
@@ -89,6 +107,11 @@ try:
 
         # check DepthCSV logic
         target_speed = DepthEval.get_speed(table, depth_offset)
+
+        # Near the surface, cap sink speed to ease through the waterline
+        if current_depth < shallow_threshold and target_speed > 0:
+            target_speed = min(target_speed, max_shallow_speed)
+
         speed_offset = actual_speed - target_speed
 
         if depth_offset > 0:  # too deep, need to rise
