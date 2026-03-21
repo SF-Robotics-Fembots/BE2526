@@ -74,7 +74,8 @@ time.sleep(2)
 speed_divisor = float(input("Enter speed divisor (e.g. 1 for normal, 2 for half speed): "))
 shallow_threshold = float(input("Enter shallow threshold in cm (e.g. 20): "))
 max_shallow_speed = float(input("Enter max shallow sink speed in cm/s (e.g. 0.1): "))
-target_depth = float(input("Enter target depth in cm: "))
+target_depth = float(input("Enter first target depth in cm: "))
+target_depth2 = float(input("Enter second target depth in cm: "))
 sensor.read(ms5837.OSR_8192)
 starting_sensor_depth = sensor.depth() * 100 # convert to cm 
 
@@ -104,6 +105,7 @@ try:
 
         # calculate offset
         depth_offset = current_depth - target_depth # negative means too high, positive means too low
+        depth_offset2 = current_depth - target_depth2
 
         # check DepthCSV logic
         target_speed = DepthEval.get_speed(table, depth_offset)
