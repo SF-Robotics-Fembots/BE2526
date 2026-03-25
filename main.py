@@ -76,6 +76,7 @@ shallow_threshold = float(input("Enter shallow threshold in cm (e.g. 20): "))
 max_shallow_speed = float(input("Enter max shallow sink speed in cm/s (e.g. 0.1): "))
 target_depth = float(input("Enter first target depth in cm: "))
 target_depth2 = float(input("Enter second target depth in cm: "))
+hold_duration = 40  # seconds to hold at target_depth before switching
 sensor.read(ms5837.OSR_8192)
 starting_sensor_depth = sensor.depth() * 100 # convert to cm 
 
@@ -85,6 +86,9 @@ previous_depth = 0
 table = DepthEval.load_speed_table("speeds.csv")
 table = [(offset, speed / speed_divisor) for offset, speed in table]
 print(f"Loaded {len(table)} entries.")
+at_depth1 = False         # whether we've reached target_depth for the first time
+depth1_hold_start = None  # timestamp when we first hit target_depth
+switched_to_depth2 = False
 startup()
 
 
@@ -108,7 +112,33 @@ try:
         depth_offset2 = current_depth - target_depth2
 
         # check DepthCSV logic
-        target_speed = DepthEval.get_speed(table, depth_offset)
+        #target_speed = DepthEval.get_speed(table, depth_offset)
+
+       # --- Depth 1 hold timer and switch to depth 2 ---
+if not switched_to_depth2:
+    # Consider "at depth" when within 5 cm of target
+    if abs(depth_offset) <= 5:
+        if depth1_hold_start is None:
+            depth1_hold_start = time.time()
+            msg = "Reached target depth 1 - hold timer started"
+            print(msg)
+            logging.info(msg)
+        elif time.time() - depth1_hold_start >= hold_duration:
+            switched_to_depth2 = True
+            msg = f"Hold complete - switching to target depth 2 ({target_depth2} cm)"
+            print(msg)
+            logging.info(msg)
+    else:
+        # Drifted out of range, reset the timer
+        if depth1_hold_start is not None:
+            depth1_hold_start = None
+            msg = "Drifted from depth 1 - hold timer reset"
+            print(msg)
+            logging.info(msg)
+
+# Use the active target depth for control
+active_offset = depth_offset2 if switched_to_depth2 else depth_offset
+target_speed = DepthEval.get_speed(table, active_offset)
 
         # Near the surface, cap sink speed to ease through the waterline
         if current_depth < shallow_threshold and target_speed > 0:
@@ -138,8 +168,13 @@ try:
                 action = 1  # Water in
 
         # Print logs to screen and file
-        msg = (f"depth={current_depth:.2f}cm  speed={actual_speed:.3f}cm/s  "
-               f"depth offset={depth_offset:.2f}cm speed_offset={speed_offset} action={'WaterIn' if action==1 else 'WaterOut'}")
+        #msg = (f"depth={current_depth:.2f}cm  speed={actual_speed:.3f}cm/s  "
+               #f"depth offset={depth_offset:.2f}cm speed_offset={speed_offset} action={'WaterIn' if action==1 else 'WaterOut'}")
+        
+        phase = "PHASE2" if switched_to_depth2 else "PHASE1"
+        msg = (f"[{phase}] depth={current_depth:.2f}cm speed={actual_speed:.3f}cm/s "
+            f"depth offset={active_offset:.2f}cm speed_offset={speed_offset:.3f} action={'WaterIn' if action==1 else 'WaterOut'}")
+        
         print(msg)
         logging.info(msg)
 
