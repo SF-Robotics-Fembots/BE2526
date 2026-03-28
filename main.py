@@ -136,9 +136,9 @@ try:
                 print(msg)
                 logging.info(msg)
 
-# Use the active target depth for control
-active_offset = depth_offset2 if switched_to_depth2 else depth_offset
-target_speed = DepthEval.get_speed(table, active_offset)
+    # Use the active target depth for control
+    active_offset = depth_offset2 if switched_to_depth2 else depth_offset
+    target_speed = DepthEval.get_speed(table, active_offset)
 
         # Near the surface, cap sink speed to ease through the waterline
         if current_depth < shallow_threshold and target_speed > 0:
