@@ -115,26 +115,26 @@ try:
         #target_speed = DepthEval.get_speed(table, depth_offset)
 
        # --- Depth 1 hold timer and switch to depth 2 ---
-if not switched_to_depth2:
-    # Consider "at depth" when within 5 cm of target
-    if abs(depth_offset) <= 5:
-        if depth1_hold_start is None:
-            depth1_hold_start = time.time()
-            msg = "Reached target depth 1 - hold timer started"
-            print(msg)
-            logging.info(msg)
-        elif time.time() - depth1_hold_start >= hold_duration:
-            switched_to_depth2 = True
-            msg = f"Hold complete - switching to target depth 2 ({target_depth2} cm)"
-            print(msg)
-            logging.info(msg)
-    else:
-        # Drifted out of range, reset the timer
-        if depth1_hold_start is not None:
-            depth1_hold_start = None
-            msg = "Drifted from depth 1 - hold timer reset"
-            print(msg)
-            logging.info(msg)
+    if not switched_to_depth2:
+        # Consider "at depth" when within 5 cm of target
+        if abs(depth_offset) <= 5:
+            if depth1_hold_start is None:
+                depth1_hold_start = time.time()
+                msg = "Reached target depth 1 - hold timer started"
+                print(msg)
+                logging.info(msg)
+            elif time.time() - depth1_hold_start >= hold_duration:
+                switched_to_depth2 = True
+                msg = f"Hold complete - switching to target depth 2 ({target_depth2} cm)"
+                print(msg)
+                logging.info(msg)
+        else:
+            # Drifted out of range, reset the timer
+            if depth1_hold_start is not None:
+                depth1_hold_start = None
+                msg = "Drifted from depth 1 - hold timer reset"
+                print(msg)
+                logging.info(msg)
 
 # Use the active target depth for control
 active_offset = depth_offset2 if switched_to_depth2 else depth_offset
