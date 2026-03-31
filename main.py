@@ -121,7 +121,10 @@ try:
         #current_depth = float(input("Enter current depth in cm: ")) #should be updated automatically == will be MS5837 read
         try:
             sensor.read(ms5837.OSR_8192)
+            sensor_depth = sensor.depth() * 100
             current_depth = sensor.depth() * 100 - starting_sensor_depth # convert to cm and adjust for the depth of the sensor on the robot
+            top_depth = sensor.depth() * 100 - 31
+            bottom_depth = sensor.depth() * 100 + 21
         except:
             print("                 ***FAILED READING***")
             continue
