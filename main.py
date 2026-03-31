@@ -34,7 +34,7 @@ DEBUG = 1
 GPIO_IN = 5
 GPIO_OUT = 6
 
-=# Set the GPIO mode (BOARD)
+# Set the GPIO mode (BOARD)
 GPIO.setmode(GPIO.BCM)
 
 
