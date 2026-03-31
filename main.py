@@ -170,7 +170,7 @@ try:
         if current_depth < shallow_threshold and target_speed > 0:
             target_speed = min(target_speed, max_shallow_speed)
 
-        speed_offset = actual_speed - target_speed
+        speed_offset = target_speed - actual_speed
 
         if depth_offset > 0:  # too deep, need to rise
             print("Depth too low")
