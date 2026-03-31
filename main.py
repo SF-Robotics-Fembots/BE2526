@@ -25,6 +25,23 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
+def startup():
+    print("Initializing MS5837 sensor...")
+    if not sensor.init():
+        print("ERROR: Sensor failed to initialize. Check wiring/I2C.")
+        logging.error("Sensor failed to initialize")
+        exit(1)
+
+    time.sleep(1)
+
+    if not sensor.read(ms5837.OSR_8192):
+        print("ERROR: Sensor failed first read.")
+        logging.error("Sensor failed first read")
+        exit(1)
+
+    sensor.setFluidDensity(ms5837.DENSITY_FRESHWATER)
+    print("Sensor initialized successfully.")
+
 print("Starting sensor")
 sensor = ms5837.MS5837_02BA()
 print("Sensor started")
@@ -55,22 +72,7 @@ GPIO.output(GPIO_OUT, GPIO.LOW)
 
 
 
-def startup():
-    print("Initializing MS5837 sensor...")
-    if not sensor.init():
-        print("ERROR: Sensor failed to initialize. Check wiring/I2C.")
-        logging.error("Sensor failed to initialize")
-        exit(1)
 
-    time.sleep(1)
-
-    if not sensor.read(ms5837.OSR_8192):
-        print("ERROR: Sensor failed first read.")
-        logging.error("Sensor failed first read")
-        exit(1)
-
-    sensor.setFluidDensity(ms5837.DENSITY_FRESHWATER)
-    print("Sensor initialized successfully.")
 
 def pump(direction):
     if direction == 1:  # Water In
