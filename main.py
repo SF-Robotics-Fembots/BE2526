@@ -34,7 +34,7 @@ DEBUG = 1
 GPIO_IN = 5
 GPIO_OUT = 6
 
-# Set the GPIO mode (BOARD)
+=# Set the GPIO mode (BOARD)
 GPIO.setmode(GPIO.BCM)
 
 
@@ -44,14 +44,33 @@ GPIO.setup(GPIO_OUT, GPIO.OUT)
 GPIO.output(GPIO_IN, GPIO.LOW)
 GPIO.output(GPIO_OUT, GPIO.LOW)
 
+#def startup():
+##	print("prep to init")
+#	sensor.init()
+#	time.sleep(1)
+##	print("prep to read")
+#	sensor.read(ms5837.OSR_8192)
+##	print("prep to set density")
+#	sensor.setFluidDensity(ms5837.DENSITY_FRESHWATER)
+
+
+
 def startup():
-#	print("prep to init")
-	sensor.init()
-	time.sleep(1)
-#	print("prep to read")
-	sensor.read(ms5837.OSR_8192)
-#	print("prep to set density")
-	sensor.setFluidDensity(ms5837.DENSITY_FRESHWATER)
+    print("Initializing MS5837 sensor...")
+    if not sensor.init():
+        print("ERROR: Sensor failed to initialize. Check wiring/I2C.")
+        logging.error("Sensor failed to initialize")
+        exit(1)
+
+    time.sleep(1)
+
+    if not sensor.read(ms5837.OSR_8192):
+        print("ERROR: Sensor failed first read.")
+        logging.error("Sensor failed first read")
+        exit(1)
+
+    sensor.setFluidDensity(ms5837.DENSITY_FRESHWATER)
+    print("Sensor initialized successfully.")
 
 def pump(direction):
     if direction == 1:  # Water In
@@ -98,7 +117,7 @@ try:
         #current_depth = float(input("Enter current depth in cm: ")) #should be updated automatically == will be MS5837 read
         try:
             sensor.read(ms5837.OSR_8192)
-            current_depth = sensor.depth() * 100 - starting_sensor_depth# convert to cm and adjust for the depth of the sensor on the robot
+            current_depth = sensor.depth() * 100 - starting_sensor_depth # convert to cm and adjust for the depth of the sensor on the robot
         except:
             print("                 ***FAILED READING***")
             continue
