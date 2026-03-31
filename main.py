@@ -96,7 +96,7 @@ max_shallow_speed = float(input("Enter max shallow sink speed in cm/s (e.g. 0.1)
 target_depth = float(input("Enter first target depth in cm: "))
 target_depth2 = float(input("Enter second target depth in cm: "))
 hold_duration = 40  # seconds to hold at target_depth before switching
-sensor.read(ms5837.OSR_8192)
+sensor.read(ms5837.OSR_256)
 starting_sensor_depth = sensor.depth() * 100 # convert to cm 
 
 
