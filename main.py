@@ -113,7 +113,6 @@ print(f"Loaded {len(table)} entries.")
 at_depth1 = False         # whether we've reached target_depth for the first time
 depth1_hold_start = None  # timestamp when we first hit target_depth
 switched_to_depth2 = False
-startup()
 
 
 try:
@@ -160,56 +159,56 @@ try:
                     print(msg)
                     logging.info(msg)
 
-    # Use the active target depth for control
-    active_offset = depth_offset2 if switched_to_depth2 else depth_offset
-    target_speed = DepthEval.get_speed(table, active_offset)
+        # Use the active target depth for control
+        active_offset = depth_offset2 if switched_to_depth2 else depth_offset
+        target_speed = DepthEval.get_speed(table, active_offset)
 
-    # Near the surface, cap sink speed to ease through the waterline
-    if current_depth < shallow_threshold and target_speed > 0:
-        target_speed = min(target_speed, max_shallow_speed)
+        # Near the surface, cap sink speed to ease through the waterline
+        if current_depth < shallow_threshold and target_speed > 0:
+            target_speed = min(target_speed, max_shallow_speed)
 
-    speed_offset = actual_speed - target_speed
+        speed_offset = actual_speed - target_speed
 
-    if depth_offset > 0:  # too deep, need to rise
-        print("Depth too low")
-        if speed_offset > 0:  # rising too slow
-            print("Speed too slow")
-            print("Water out")
-            action = 2  # Water out
-        else:  # rising too fast
-            print("Speed too fast")
-            print("Water in")
-            action = 1  # Water In
-    else:  # too high (too shallow, need to sink)
-        print("Depth too high")
-        if speed_offset > 0:  # sinking too fast
-            print("Speed too fast")
-            print("Water out")
-            action = 2  # Water out
-        else:  # sinking too slow
-            print("Speed too slow")
-            print("Water in")
-            action = 1  # Water in
+        if depth_offset > 0:  # too deep, need to rise
+            print("Depth too low")
+            if speed_offset > 0:  # rising too slow
+                print("Speed too slow")
+                print("Water out")
+                action = 2  # Water out
+            else:  # rising too fast
+                print("Speed too fast")
+                print("Water in")
+                action = 1  # Water In
+        else:  # too high (too shallow, need to sink)
+            print("Depth too high")
+            if speed_offset > 0:  # sinking too fast
+                print("Speed too fast")
+                print("Water out")
+                action = 2  # Water out
+            else:  # sinking too slow
+                print("Speed too slow")
+                print("Water in")
+                action = 1  # Water in
 
-    # Print logs to screen and file
-    #msg = (f"depth={current_depth:.2f}cm  speed={actual_speed:.3f}cm/s  "
-            #f"depth offset={depth_offset:.2f}cm speed_offset={speed_offset} action={'WaterIn' if action==1 else 'WaterOut'}")
-    
-    phase = "PHASE2" if switched_to_depth2 else "PHASE1"
-    msg = (f"[{phase}] depth={current_depth:.2f}cm speed={actual_speed:.3f}cm/s "
-        f"depth offset={active_offset:.2f}cm speed_offset={speed_offset:.3f} action={'WaterIn' if action==1 else 'WaterOut'}")
-    
-    print(msg)
-    logging.info(msg)
-
-
-    # TURN ON PUMP HERE BASED ON ACTION
-    pump(action)
+        # Print logs to screen and file
+        #msg = (f"depth={current_depth:.2f}cm  speed={actual_speed:.3f}cm/s  "
+                #f"depth offset={depth_offset:.2f}cm speed_offset={speed_offset} action={'WaterIn' if action==1 else 'WaterOut'}")
+        
+        phase = "PHASE2" if switched_to_depth2 else "PHASE1"
+        msg = (f"[{phase}] depth={current_depth:.2f}cm speed={actual_speed:.3f}cm/s "
+            f"depth offset={active_offset:.2f}cm speed_offset={speed_offset:.3f} action={'WaterIn' if action==1 else 'WaterOut'}")
+        
+        print(msg)
+        logging.info(msg)
 
 
-    previous_depth = current_depth
+        # TURN ON PUMP HERE BASED ON ACTION
+        pump(action)
 
-    time.sleep(cycle)
+
+        previous_depth = current_depth
+
+        time.sleep(cycle)
 
 
 except KeyboardInterrupt:
