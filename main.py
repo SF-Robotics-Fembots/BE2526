@@ -71,6 +71,8 @@ cycle=0.2 #seconds
 
 time.sleep(2)
 
+startup()
+
 speed_divisor = float(input("Enter speed divisor (e.g. 1 for normal, 2 for half speed): "))
 shallow_threshold = float(input("Enter shallow threshold in cm (e.g. 20): "))
 max_shallow_speed = float(input("Enter max shallow sink speed in cm/s (e.g. 0.1): "))
@@ -84,7 +86,7 @@ previous_depth = 0
 table = DepthEval.load_speed_table("speeds.csv")
 table = [(offset, speed / speed_divisor) for offset, speed in table]
 print(f"Loaded {len(table)} entries.")
-startup()
+
 
 
 try:
