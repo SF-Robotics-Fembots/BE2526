@@ -78,6 +78,7 @@ shallow_threshold = float(input("Enter shallow threshold in cm (e.g. 20): "))
 max_shallow_speed = float(input("Enter max shallow sink speed in cm/s (e.g. 0.1): "))
 target_depth = float(input("Enter target depth in cm: "))
 hold_duration = float(input("Enter hold duration at target depth in seconds (e.g. 30): "))
+target_depth_2 = float(input("Enter second target depth in cm: "))
 sensor.read(ms5837.OSR_8192)
 starting_sensor_depth = sensor.depth() * 100 # convert to cm 
 
@@ -116,19 +117,29 @@ def get_pump_action(depth_offset, speed_offset):
 def run_phase(current_depth, actual_speed, depth_offset):
     global phase, hold_start_time
 
-    if phase == "surfacing":
-        action = 2  # Water out
-        msg = (f"[SURFACING] depth={current_depth:.2f}cm  speed={actual_speed:.3f}cm/s")
+    if phase == "sinking2":
+        depth_offset_2 = current_depth - target_depth_2
+        target_speed = DepthEval.get_speed(table, depth_offset_2)
+
+        if current_depth < shallow_threshold and target_speed > 0:
+            target_speed = min(target_speed, max_shallow_speed)
+
+        speed_offset = actual_speed - target_speed
+        action = get_pump_action(depth_offset_2, speed_offset)
+
+        msg = (f"[SINKING2] depth={current_depth:.2f}cm  speed={actual_speed:.3f}cm/s  "
+               f"depth offset={depth_offset_2:.2f}cm speed_offset={speed_offset} action={'WaterIn' if action==1 else 'WaterOut'}")
         print(msg)
         logging.info(msg)
         pump(action)
-        if current_depth <= 2.0:
-            msg = "Reached surface. Stopping."
+
+        if abs(depth_offset_2) <= hold_tolerance:
+            msg = f"Reached second target depth {target_depth_2:.2f}cm. Stopping."
             print(msg)
             logging.info(msg)
             GPIO.output(GPIO_IN, GPIO.LOW)
             GPIO.output(GPIO_OUT, GPIO.LOW)
-            return True  # signal to break the loop
+            return True  # done
         return False
     else:
         # check DepthCSV logic
@@ -148,22 +159,19 @@ def run_phase(current_depth, actual_speed, depth_offset):
             print(msg)
             logging.info(msg)
 
-        # Transition: holding -> surfacing
+        # Transition: holding -> sinking2
         if phase == "holding" and (time.time() - hold_start_time) >= hold_duration:
-            phase = "surfacing"
-            msg = "Hold complete. Surfacing."
+            phase = "sinking2"
+            msg = f"Hold complete. Moving to second target depth {target_depth_2:.2f}cm."
             print(msg)
             logging.info(msg)
 
         action = get_pump_action(depth_offset, speed_offset)
 
-        # Print logs to screen and file
         msg = (f"[{phase.upper()}] depth={current_depth:.2f}cm  speed={actual_speed:.3f}cm/s  "
                f"depth offset={depth_offset:.2f}cm speed_offset={speed_offset} action={'WaterIn' if action==1 else 'WaterOut'}")
         print(msg)
         logging.info(msg)
-
-        # TURN ON PUMP HERE BASED ON ACTION
         pump(action)
         return False
 
