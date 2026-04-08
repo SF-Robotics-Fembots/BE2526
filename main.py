@@ -87,26 +87,26 @@ table = DepthEval.load_speed_table("speeds.csv")
 table = [(offset, speed / speed_divisor) for offset, speed in table]
 print(f"Loaded {len(table)} entries.")
 
-
+def get_depth_reading():
+    global sensor, starting_sensor_depth
+    try:
+        sensor.read(ms5837.OSR_8192)
+        current_depth = sensor.depth() * 100 - starting_sensor_depth  # convert to cm and adjust
+        return current_depth
+    except Exception:
+        print("                 ***FAILED READING***")
+        return 0
 
 try:
     while True:
         print("Starting Main Loop")
-        #current_depth = float(input("Enter current depth in cm: ")) #should be updated automatically == will be MS5837 read
-        try:
-            sensor.read(ms5837.OSR_8192)
-            current_depth = sensor.depth() * 100 - starting_sensor_depth# convert to cm and adjust for the depth of the sensor on the robot
-        except:
-            print("                 ***FAILED READING***")
-            continue
-
+        current_depth = get_depth_reading()
 
         # calculate speed
         actual_speed = (current_depth - previous_depth) / cycle  # positive when sinking
 
         # calculate offset
-        depth_offset = current_depth - target_depth # negative means too high, positive means too low
-
+        depth_offset = current_depth - target_depth  # negative means too high, positive means too low
         # check DepthCSV logic
         target_speed = DepthEval.get_speed(table, depth_offset)
 
