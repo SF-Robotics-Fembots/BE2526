@@ -78,17 +78,12 @@ shallow_threshold = float(input("Enter shallow threshold in cm (e.g. 20): "))
 max_shallow_speed = float(input("Enter max shallow sink speed in cm/s (e.g. 0.1): "))
 target_depth = float(input("Enter target depth in cm: "))
 hold_duration = float(input("Enter hold duration at target depth in seconds (e.g. 30): "))
-time.sleep(hold_duration)  # Hold at target depth for the specified duration
+sensor.read(ms5837.OSR_8192)
+starting_sensor_depth = sensor.depth() * 100 # convert to cm 
 
-# Bring the system back to the surface
 
+previous_depth = 0
 
-while current_depth > 0:
-
-    print("Ascending to the surface...")
-    pump(2)  # Assuming 2 is the action for bringing water out
-    time.sleep(cycle)
-    current_depth = get_depth_reading()  # Update current depth
 table = DepthEval.load_speed_table("speeds.csv")
 table = [(offset, speed / speed_divisor) for offset, speed in table]
 print(f"Loaded {len(table)} entries.")
