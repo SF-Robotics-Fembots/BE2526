@@ -88,6 +88,28 @@ table = DepthEval.load_speed_table("speeds.csv")
 table = [(offset, speed / speed_divisor) for offset, speed in table]
 print(f"Loaded {len(table)} entries.")
 
+def get_pump_action(depth_offset, speed_offset):
+    if depth_offset > 0:  # too deep, need to rise
+        print("Depth too low")
+        if speed_offset > 0:  # rising too slow
+            print("Speed too slow")
+            print("Water out")
+            return 2  # Water out
+        else:  # rising too fast
+            print("Speed too fast")
+            print("Water in")
+            return 1  # Water In
+    else:  # too high (too shallow, need to sink)
+        print("Depth too high")
+        if speed_offset > 0:  # sinking too fast
+            print("Speed too fast")
+            print("Water out")
+            return 2  # Water out
+        else:  # sinking too slow
+            print("Speed too slow")
+            print("Water in")
+            return 1  # Water in
+
 def get_depth_reading():
     global sensor, starting_sensor_depth
     attempts = 0
@@ -130,26 +152,7 @@ try:
 
         speed_offset = actual_speed - target_speed
 
-        if depth_offset > 0:  # too deep, need to rise
-            print("Depth too low")
-            if speed_offset > 0:  # rising too slow
-                print("Speed too slow")
-                print("Water out")
-                action = 2  # Water out
-            else:  # rising too fast
-                print("Speed too fast")
-                print("Water in")
-                action = 1  # Water In
-        else:  # too high (too shallow, need to sink)
-            print("Depth too high")
-            if speed_offset > 0:  # sinking too fast
-                print("Speed too fast")
-                print("Water out")
-                action = 2  # Water out
-            else:  # sinking too slow
-                print("Speed too slow")
-                print("Water in")
-                action = 1  # Water in
+        action = get_pump_action(depth_offset, speed_offset)
 
         # Print logs to screen and file
         msg = (f"depth={current_depth:.2f}cm  speed={actual_speed:.3f}cm/s  "
@@ -157,10 +160,8 @@ try:
         print(msg)
         logging.info(msg)
 
-
         # TURN ON PUMP HERE BASED ON ACTION
         pump(action)
-
 
         previous_depth = current_depth
 
