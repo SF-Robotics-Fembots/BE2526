@@ -108,9 +108,8 @@ def get_depth_reading():
                 return sum(filtered_readings) / len(filtered_readings)
         
         attempts += 1
-    return 0  # Return 0 if unable to get sufficient good readings after retries
-        print("                 ***FAILED READING***")
-        return 0
+    print("                 ***FAILED THREE READINGS***")
+    return 0
 
 try:
     while True:
