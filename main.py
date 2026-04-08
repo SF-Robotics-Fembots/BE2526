@@ -89,11 +89,25 @@ print(f"Loaded {len(table)} entries.")
 
 def get_depth_reading():
     global sensor, starting_sensor_depth
-    try:
-        sensor.read(ms5837.OSR_8192)
-        current_depth = sensor.depth() * 100 - starting_sensor_depth  # convert to cm and adjust
-        return current_depth
-    except Exception:
+    attempts = 0
+    while attempts < 3:
+        readings = []
+        for _ in range(3):
+            try:
+                sensor.read(ms5837.OSR_8192)
+                current_depth = sensor.depth() * 100 - starting_sensor_depth  # convert to cm and adjust
+                readings.append(current_depth)
+            except Exception:
+                print("                 ***FAILED READING***")
+        
+        if len(readings) >= 2:  # Check if we have at least two good readings
+            # Calculate the mean, excluding outliers
+            filtered_readings = [depth for depth in readings if depth <= 400 and depth >= -10]
+            if len(filtered_readings) >= 2:  # Check if we have at least two good readings after filtering
+                return sum(filtered_readings) / len(filtered_readings)
+        
+        attempts += 1
+    return 0  # Return 0 if unable to get sufficient good readings after retries
         print("                 ***FAILED READING***")
         return 0
 
