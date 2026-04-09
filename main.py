@@ -134,12 +134,12 @@ def run_phase(current_depth, actual_speed, depth_offset):
         pump(action)
 
         if abs(depth_offset_2) <= hold_tolerance:
-            msg = f"Reached second target depth {target_depth_2:.2f}cm. Stopping."
+            msg = f"Reached second target depth {target_depth_2:.2f}cm."
             print(msg)
             logging.info(msg)
             GPIO.output(GPIO_IN, GPIO.LOW)
             GPIO.output(GPIO_OUT, GPIO.LOW)
-            return True  # done
+            return False  # done
         return False
     else:
         # check DepthCSV logic
