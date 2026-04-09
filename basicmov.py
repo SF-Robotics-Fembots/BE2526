@@ -21,7 +21,7 @@ try:
         print("Pumping IN")
         GPIO.output(RELAY_PIN, GPIO.HIGH)
         GPIO.output(RELAY_PIN2, GPIO.LOW)
-        time.sleep(60)
+        time.sleep(10)
 
 
 
@@ -29,7 +29,7 @@ try:
         print("Pumping OUT")
         GPIO.output(RELAY_PIN, GPIO.LOW)
         GPIO.output(RELAY_PIN2, GPIO.HIGH)
-        time.sleep(60)
+        time.sleep(10)
         
         
         
