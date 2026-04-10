@@ -135,7 +135,7 @@ def run_phase(current_depth, actual_speed, depth_offset):
 
         if abs(depth_offset_2) <= hold_tolerance:
             msg = f"Reached second target depth {target_depth_2:.2f}cm. depth={current_depth:.2f}cm  speed={actual_speed:.3f}cm/s  "
-               f"depth offset={depth_offset_2:.2f}cm speed_offset={speed_offset} action={'WaterIn' if action==1 else 'WaterOut'"
+                  f"depth offset={depth_offset_2:.2f}cm speed_offset={speed_offset} action={'WaterIn' if action==1 else 'WaterOut'"
             print(msg)
             logging.info(msg)
             GPIO.output(GPIO_IN, GPIO.LOW)
