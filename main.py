@@ -120,6 +120,7 @@ def get_depth_reading():
                 sensor.read(ms5837.OSR_8192)
                 current_depth = sensor.depth() * 100 - starting_sensor_depth  # convert to cm and adjust
                 readings.append(current_depth)
+                print(f"**** GOOD READING***{current_depth:.2f}cm")
             except Exception:
                 print("                 ***FAILED READING***")
         
