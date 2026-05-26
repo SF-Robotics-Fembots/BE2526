@@ -10,6 +10,8 @@ import datetime
 import threading
 import logging
 
+##MAIN UPDATE
+
 # Archive existing buoy.log to next numbered file
 if os.path.exists("buoy.log"):
     existing = globmod.glob("buoy_*.log")
@@ -69,8 +71,6 @@ GPIO.output(GPIO_OUT, GPIO.LOW)
 #	sensor.read(ms5837.OSR_8192)
 ##	print("prep to set density")
 #	sensor.setFluidDensity(ms5837.DENSITY_FRESHWATER)
-
-
 
 
 
