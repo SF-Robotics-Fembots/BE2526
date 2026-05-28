@@ -68,6 +68,8 @@ def pump(direction):
         logging.info(msg)
 
 cycle=0.1 #seconds
+TOP_OFFSET = -17.0    # cm added to average depth to define top
+BOTTOM_OFFSET = 50.2  # cm added to average depth to define bottom
 
 time.sleep(2)
 
@@ -76,13 +78,19 @@ startup()
 speed_divisor = float(input("Enter speed divisor (e.g. 1 for normal, 2 for half speed): "))
 shallow_threshold = float(input("Enter shallow threshold in cm (e.g. 20): "))
 max_shallow_speed = float(input("Enter max shallow sink speed in cm/s (e.g. 0.1): "))
-target_depth = float(input("Enter target depth in cm: "))
+target_depth = float(input("Enter target depth in cm for the bottom: "))
 hold_duration = float(input("Enter hold duration at target depth in seconds (e.g. 30): "))
+target_depth_2 = float(input("Enter second target depth in cm for the bottom: "))
 sensor.read(ms5837.OSR_8192)
 starting_sensor_depth = sensor.depth() * 100 # convert to cm 
 
 
 previous_depth = 0
+top = 0
+bottom = 0
+phase = "sinking"
+hold_start_time = None
+hold_tolerance = 5.0  # cm — considered "at target" if within this range
 
 table = DepthEval.load_speed_table("speeds.csv")
 table = [(offset, speed / speed_divisor) for offset, speed in table]
@@ -110,8 +118,67 @@ def get_pump_action(depth_offset, speed_offset):
             print("Water in")
             return 1  # Water in
 
+def run_phase(current_depth, actual_speed, depth_offset):
+    global phase, hold_start_time
+
+    if phase == "sinking2":
+        depth_offset_2 = current_depth - target_depth_2
+        target_speed = DepthEval.get_speed(table, depth_offset_2)
+
+        if current_depth < shallow_threshold and target_speed > 0:
+            target_speed = min(target_speed, max_shallow_speed)
+
+        speed_offset = actual_speed - target_speed
+        action = get_pump_action(depth_offset_2, speed_offset)
+
+        msg = (f"[SINKING2] depth={current_depth:.2f}cm  speed={actual_speed:.3f}cm/s  "
+               f"depth offset={depth_offset_2:.2f}cm speed_offset={speed_offset} action={'WaterIn' if action==1 else 'WaterOut'}")
+        print(msg)
+        logging.info(msg)
+        pump(action)
+
+        if abs(depth_offset_2) <= hold_tolerance:
+            msg = f"Reached second target depth {target_depth_2:.2f}cm. Stopping."
+            print(msg)
+            logging.info(msg)
+            GPIO.output(GPIO_IN, GPIO.LOW)
+            GPIO.output(GPIO_OUT, GPIO.LOW)
+            return True
+        return False
+    else:
+        target_speed = DepthEval.get_speed(table, depth_offset)
+
+        if current_depth < shallow_threshold and target_speed > 0:
+            target_speed = min(target_speed, max_shallow_speed)
+
+        speed_offset = actual_speed - target_speed
+
+        # Transition: sinking -> holding
+        if phase == "sinking" and abs(depth_offset) <= hold_tolerance:
+            phase = "holding"
+            hold_start_time = time.time()
+            msg = f"Reached target depth {target_depth:.2f}cm. Holding for {hold_duration:.0f}s."
+            print(msg)
+            logging.info(msg)
+
+        # Transition: holding -> sinking2
+        if phase == "holding" and (time.time() - hold_start_time) >= hold_duration:
+            phase = "sinking2"
+            msg = f"Hold complete. Moving to second target depth {target_depth_2:.2f}cm."
+            print(msg)
+            logging.info(msg)
+
+        action = get_pump_action(depth_offset, speed_offset)
+
+        msg = (f"[{phase.upper()}] depth={current_depth:.2f}cm  speed={actual_speed:.3f}cm/s  "
+               f"depth offset={depth_offset:.2f}cm speed_offset={speed_offset} action={'WaterIn' if action==1 else 'WaterOut'}")
+        print(msg)
+        logging.info(msg)
+        pump(action)
+        return False
+
 def get_depth_reading():
-    global sensor, starting_sensor_depth
+    global sensor, starting_sensor_depth, top, bottom
     attempts = 0
     while attempts < 3:
         readings = []
@@ -122,13 +189,16 @@ def get_depth_reading():
                 readings.append(current_depth)
             except Exception:
                 print("                 ***FAILED READING***")
-        
+
         if len(readings) >= 2:  # Check if we have at least two good readings
             # Calculate the mean, excluding outliers
             filtered_readings = [depth for depth in readings if depth <= 400 and depth >= -10]
             if len(filtered_readings) >= 2:  # Check if we have at least two good readings after filtering
-                return sum(filtered_readings) / len(filtered_readings)
-        
+                avg = sum(filtered_readings) / len(filtered_readings)
+                top = avg + TOP_OFFSET
+                bottom = avg + BOTTOM_OFFSET
+                return avg
+
         attempts += 1
     print("                 ***FAILED THREE READINGS***")
     return 0
@@ -142,26 +212,12 @@ try:
         actual_speed = (current_depth - previous_depth) / cycle  # positive when sinking
 
         # calculate offset
-        depth_offset = current_depth - target_depth  # negative means too high, positive means too low
-        # check DepthCSV logic
-        target_speed = DepthEval.get_speed(table, depth_offset)
+#        depth_offset = current_depth - target_depth  # negative means too high, positive means too low
+        depth_offset = bottom - target_depth  # negative means too high, positive means too low
 
-        # Near the surface, cap sink speed to ease through the waterline
-        if current_depth < shallow_threshold and target_speed > 0:
-            target_speed = min(target_speed, max_shallow_speed)
-
-        speed_offset = actual_speed - target_speed
-
-        action = get_pump_action(depth_offset, speed_offset)
-
-        # Print logs to screen and file
-        msg = (f"depth={current_depth:.2f}cm  speed={actual_speed:.3f}cm/s  "
-               f"depth offset={depth_offset:.2f}cm speed_offset={speed_offset} action={'WaterIn' if action==1 else 'WaterOut'}")
-        print(msg)
-        logging.info(msg)
-
-        # TURN ON PUMP HERE BASED ON ACTION
-        pump(action)
+#        if run_phase(current_depth, actual_speed, depth_offset):
+        if run_phase(bottom, actual_speed, depth_offset):
+            break
 
         previous_depth = current_depth
 
