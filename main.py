@@ -91,6 +91,8 @@ bottom = 0
 phase = "sinking"
 hold_start_time = None
 hold_tolerance = 5.0  # cm — considered "at target" if within this range
+expel_start_depth = 0
+EXPEL_RISE = 10.0  # cm the buoy must rise during expelling before pump stops
 
 table = DepthEval.load_speed_table("speeds.csv")
 table = [(offset, speed / speed_divisor) for offset, speed in table]
@@ -119,26 +121,18 @@ def get_pump_action(depth_offset, speed_offset):
             return 1  # Water in
 
 def run_phase(current_depth, actual_speed, depth_offset):
-    global phase, hold_start_time
+    global phase, hold_start_time, expel_start_depth
 
-    if phase == "sinking2":
-        depth_offset_2 = current_depth - target_depth_2
-        target_speed = DepthEval.get_speed(table, depth_offset_2)
-
-        if current_depth < shallow_threshold and target_speed > 0:
-            target_speed = min(target_speed, max_shallow_speed)
-
-        speed_offset = actual_speed - target_speed
-        action = get_pump_action(depth_offset_2, speed_offset)
-
-        msg = (f"[SINKING2] depth={current_depth:.2f}cm  speed={actual_speed:.3f}cm/s  "
-               f"depth offset={depth_offset_2:.2f}cm speed_offset={speed_offset} action={'WaterIn' if action==1 else 'WaterOut'}")
+    if phase == "expelling":
+        action = 2  # Water out
+        msg = (f"[EXPELLING] depth={current_depth:.2f}cm  speed={actual_speed:.3f}cm/s  "
+               f"start={expel_start_depth:.2f}cm")
         print(msg)
         logging.info(msg)
         pump(action)
 
-        if abs(depth_offset_2) <= hold_tolerance:
-            msg = f"Reached second target depth {target_depth_2:.2f}cm. Stopping."
+        if current_depth <= expel_start_depth - EXPEL_RISE:
+            msg = f"Risen {EXPEL_RISE:.0f}cm. Stopping pump."
             print(msg)
             logging.info(msg)
             GPIO.output(GPIO_IN, GPIO.LOW)
@@ -161,10 +155,11 @@ def run_phase(current_depth, actual_speed, depth_offset):
             print(msg)
             logging.info(msg)
 
-        # Transition: holding -> sinking2
+        # Transition: holding -> expelling
         if phase == "holding" and (time.time() - hold_start_time) >= hold_duration:
-            phase = "sinking2"
-            msg = f"Hold complete. Moving to second target depth {target_depth_2:.2f}cm."
+            phase = "expelling"
+            expel_start_depth = current_depth
+            msg = f"Hold complete. Expelling water until risen {EXPEL_RISE:.0f}cm."
             print(msg)
             logging.info(msg)
 
