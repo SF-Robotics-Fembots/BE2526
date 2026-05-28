@@ -68,8 +68,8 @@ def pump(direction):
         logging.info(msg)
 
 cycle=0.1 #seconds
-TOP_OFFSET = -17.0    # cm added to average depth to define top
-BOTTOM_OFFSET = 50.2  # cm added to average depth to define bottom
+TOP_OFFSET = 0    # cm added to average depth to define top
+BOTTOM_OFFSET = 0  # cm added to average depth to define bottom
 
 time.sleep(2)
 
@@ -80,7 +80,7 @@ shallow_threshold = float(input("Enter shallow threshold in cm (e.g. 20): "))
 max_shallow_speed = float(input("Enter max shallow sink speed in cm/s (e.g. 0.1): "))
 target_depth = float(input("Enter target depth in cm for the bottom: "))
 hold_duration = float(input("Enter hold duration at target depth in seconds (e.g. 30): "))
-target_depth_2 = float(input("Enter second target depth in cm for the bottom: "))
+#target_depth_2 = float(input("Enter second target depth in cm for the bottom: "))
 sensor.read(ms5837.OSR_8192)
 starting_sensor_depth = sensor.depth() * 100 # convert to cm 
 
@@ -145,24 +145,31 @@ def get_pump_action(depth_offset, speed_offset):
             print("Water in")
             return 1  # Water in
 
-def run_phase(current_depth, actual_speed, depth_offset):
+def move_motor(current_depth, actual_speed, depth_offset):
     global phase, hold_start_time
+    phase = "no phase"
 
     target_speed = DepthEval.get_speed(table, depth_offset)
 
+    #Check for shallow depth and adjust speed targets
     if current_depth < shallow_threshold and target_speed > 0:
-        target_speed = min(target_speed, max_shallow_speed)
-
-    speed_offset = actual_speed - target_speed
-
-    # Transition: sinking -> holding
-    if phase == "sinking" and abs(depth_offset) <= hold_tolerance:
-        phase = "holding"
-        hold_start_time = time.time()
-        msg = f"Reached target depth {target_depth:.2f}cm. Holding for {hold_duration:.0f}s."
+        msg = (f"SHALLOW DEPTH")
         print(msg)
         logging.info(msg)
+        target_speed = min(target_speed, max_shallow_speed)
 
+    #calulcate too fast/too slow
+    speed_offset = actual_speed - target_speed
+
+    # # Transition: sinking -> holding
+    # if phase == "sinking" and abs(depth_offset) <= hold_tolerance:
+    #     phase = "holding"
+    #     hold_start_time = time.time()
+    #     msg = f"Reached target depth {target_depth:.2f}cm. Holding for {hold_duration:.0f}s."
+    #     print(msg)
+    #     logging.info(msg)
+
+    # which way should the pump move?
     action = get_pump_action(depth_offset, speed_offset)
 
     msg = (f"[{phase.upper()}] depth={current_depth:.2f}cm  speed={actual_speed:.3f}cm/s  "
@@ -182,11 +189,9 @@ try:
         actual_speed = (current_depth - previous_depth) / cycle  # positive when sinking
 
         # calculate offset
-#        depth_offset = current_depth - target_depth  # negative means too high, positive means too low
-        depth_offset = bottom - target_depth  # negative means too high, positive means too low
+        depth_offset = current_depth - target_depth  # negative means too high, positive means too low
 
-#        if run_phase(current_depth, actual_speed, depth_offset):
-        if run_phase(bottom, actual_speed, depth_offset):
+        if move_motor(current_depth, actual_speed, depth_offset):
             break
 
         previous_depth = current_depth
