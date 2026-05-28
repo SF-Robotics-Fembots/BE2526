@@ -91,86 +91,10 @@ bottom = 0
 phase = "sinking"
 hold_start_time = None
 hold_tolerance = 5.0  # cm — considered "at target" if within this range
-expel_start_depth = 0
-EXPEL_RISE = 10.0  # cm the buoy must rise during expelling before pump stops
 
 table = DepthEval.load_speed_table("speeds.csv")
 table = [(offset, speed / speed_divisor) for offset, speed in table]
 print(f"Loaded {len(table)} entries.")
-
-def get_pump_action(depth_offset, speed_offset):
-    if depth_offset > 0:  # too deep, need to rise
-        print("Depth too low")
-        if speed_offset > 0:  # rising too slow
-            print("Speed too slow")
-            print("Water out")
-            return 2  # Water out
-        else:  # rising too fast
-            print("Speed too fast")
-            print("Water in")
-            return 1  # Water In
-    else:  # too high (too shallow, need to sink)
-        print("Depth too high")
-        if speed_offset > 0:  # sinking too fast
-            print("Speed too fast")
-            print("Water out")
-            return 2  # Water out
-        else:  # sinking too slow
-            print("Speed too slow")
-            print("Water in")
-            return 1  # Water in
-
-def run_phase(current_depth, actual_speed, depth_offset):
-    global phase, hold_start_time, expel_start_depth
-
-    if phase == "expelling":
-        action = 2  # Water out
-        msg = (f"[EXPELLING] depth={current_depth:.2f}cm  speed={actual_speed:.3f}cm/s  "
-               f"start={expel_start_depth:.2f}cm")
-        print(msg)
-        logging.info(msg)
-        pump(action)
-
-        if current_depth <= expel_start_depth - EXPEL_RISE:
-            msg = f"Risen {EXPEL_RISE:.0f}cm. Stopping pump."
-            print(msg)
-            logging.info(msg)
-            GPIO.output(GPIO_IN, GPIO.LOW)
-            GPIO.output(GPIO_OUT, GPIO.LOW)
-            return True
-        return False
-    else:
-        target_speed = DepthEval.get_speed(table, depth_offset)
-
-        if current_depth < shallow_threshold and target_speed > 0:
-            target_speed = min(target_speed, max_shallow_speed)
-
-        speed_offset = actual_speed - target_speed
-
-        # Transition: sinking -> holding
-        if phase == "sinking" and abs(depth_offset) <= hold_tolerance:
-            phase = "holding"
-            hold_start_time = time.time()
-            msg = f"Reached target depth {target_depth:.2f}cm. Holding for {hold_duration:.0f}s."
-            print(msg)
-            logging.info(msg)
-
-        # Transition: holding -> expelling
-        if phase == "holding" and (time.time() - hold_start_time) >= hold_duration:
-            phase = "expelling"
-            expel_start_depth = current_depth
-            msg = f"Hold complete. Expelling water until risen {EXPEL_RISE:.0f}cm."
-            print(msg)
-            logging.info(msg)
-
-        action = get_pump_action(depth_offset, speed_offset)
-
-        msg = (f"[{phase.upper()}] depth={current_depth:.2f}cm  speed={actual_speed:.3f}cm/s  "
-               f"depth offset={depth_offset:.2f}cm speed_offset={speed_offset} action={'WaterIn' if action==1 else 'WaterOut'}")
-        print(msg)
-        logging.info(msg)
-        pump(action)
-        return False
 
 def get_depth_reading():
     global sensor, starting_sensor_depth, top, bottom
@@ -197,6 +121,57 @@ def get_depth_reading():
         attempts += 1
     print("                 ***FAILED THREE READINGS***")
     return 0
+
+
+def get_pump_action(depth_offset, speed_offset):
+    if depth_offset > 0:  # too deep, need to rise
+        print("Depth too low")
+        if speed_offset > 0:  # rising too slow
+            print("Speed too slow")
+            print("Water out")
+            return 2  # Water out
+        else:  # rising too fast
+            print("Speed too fast")
+            print("Water in")
+            return 1  # Water In
+    else:  # too high (too shallow, need to sink)
+        print("Depth too high")
+        if speed_offset > 0:  # sinking too fast
+            print("Speed too fast")
+            print("Water out")
+            return 2  # Water out
+        else:  # sinking too slow
+            print("Speed too slow")
+            print("Water in")
+            return 1  # Water in
+
+def run_phase(current_depth, actual_speed, depth_offset):
+    global phase, hold_start_time
+
+    target_speed = DepthEval.get_speed(table, depth_offset)
+
+    if current_depth < shallow_threshold and target_speed > 0:
+        target_speed = min(target_speed, max_shallow_speed)
+
+    speed_offset = actual_speed - target_speed
+
+    # Transition: sinking -> holding
+    if phase == "sinking" and abs(depth_offset) <= hold_tolerance:
+        phase = "holding"
+        hold_start_time = time.time()
+        msg = f"Reached target depth {target_depth:.2f}cm. Holding for {hold_duration:.0f}s."
+        print(msg)
+        logging.info(msg)
+
+    action = get_pump_action(depth_offset, speed_offset)
+
+    msg = (f"[{phase.upper()}] depth={current_depth:.2f}cm  speed={actual_speed:.3f}cm/s  "
+           f"depth offset={depth_offset:.2f}cm speed_offset={speed_offset} action={'WaterIn' if action==1 else 'WaterOut'}")
+    print(msg)
+    logging.info(msg)
+    pump(action)
+    return False
+
 
 try:
     while True:
