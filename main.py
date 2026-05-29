@@ -6,7 +6,6 @@ import DepthEval
 import ms5837
 import smbus
 import RPi.GPIO as GPIO
-import datetime
 import threading
 import logging
 
@@ -70,6 +69,8 @@ def pump(direction):
 cycle=0.1 #seconds
 TOP_OFFSET = 0    # cm added to average depth to define top
 BOTTOM_OFFSET = 0  # cm added to average depth to define bottom
+DEPTH_WINDOW = 33.0       # cm — allowed deviation from target depth
+REQUIRED_CONSECUTIVE = 7  # consecutive 5s readings needed within window
 
 time.sleep(2)
 
@@ -78,9 +79,9 @@ startup()
 speed_divisor = float(input("Enter speed divisor (e.g. 1 for normal, 2 for half speed): "))
 shallow_threshold = float(input("Enter shallow threshold in cm (e.g. 20): "))
 max_shallow_speed = float(input("Enter max shallow sink speed in cm/s (e.g. 0.1): "))
-target_depth = float(input("Enter target depth in cm for the bottom: "))
+target_depth = float(input("Enter target depth in cm: "))
+target_depth_2 = float(input("Enter second target depth in cm: "))
 hold_duration = float(input("Enter hold duration at target depth in seconds (e.g. 30): "))
-#target_depth_2 = float(input("Enter second target depth in cm for the bottom: "))
 sensor.read(ms5837.OSR_8192)
 starting_sensor_depth = sensor.depth() * 100 # convert to cm 
 
@@ -180,6 +181,36 @@ def move_motor(current_depth, actual_speed, depth_offset):
     return False
 
 
+open("collect_data.txt", "w").close()  # erase on startup
+
+mission_complete = threading.Event()
+
+consecutive_in_window = 0
+
+def data_logger():
+    global consecutive_in_window
+    elapsed = 0
+    while True:
+        now = time.time()
+        next_log = (int(now) // 5 + 1) * 5
+        time.sleep(next_log - now)
+        elapsed += 5
+
+        if abs(current_depth - target_depth) <= DEPTH_WINDOW:
+            consecutive_in_window += 1
+        else:
+            consecutive_in_window = 0
+
+        msg = f"0371A  t={elapsed}s  depth={current_depth:.2f}cm  in_window={consecutive_in_window}/{REQUIRED_CONSECUTIVE}"
+        with open("collect_data.txt", "a") as f:
+            f.write(msg + "\n")
+
+        if consecutive_in_window >= REQUIRED_CONSECUTIVE:
+            mission_complete.set()
+
+logger_thread = threading.Thread(target=data_logger, daemon=True)
+logger_thread.start()
+
 try:
     while True:
         print("Starting Main Loop")
@@ -193,6 +224,14 @@ try:
 
         if move_motor(current_depth, actual_speed, depth_offset):
             break
+
+        if mission_complete.is_set():
+            msg = f"7 consecutive readings within window at depth {target_depth:.2f}cm. Moving to depth2 {target_depth_2:.2f}cm."
+            print(msg)
+            logging.info(msg)
+            target_depth = target_depth_2
+            consecutive_in_window = 0
+            mission_complete.clear()
 
         previous_depth = current_depth
 
