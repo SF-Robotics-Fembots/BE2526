@@ -90,6 +90,9 @@ sensor.read(ms5837.OSR_8192)
 starting_sensor_depth = sensor.depth() * 100 # convert to cm 
 
 
+target_depth_1 = target_depth  # save original to return to after depth2
+leg = 1  # 1: depth1 hold, 2: depth2 hold, 3: depth1 hold again, 4: depth2 forever
+
 previous_depth = 0
 top = 0
 phase = "sinking"
@@ -198,7 +201,7 @@ def data_logger():
         time.sleep(next_log - now)
         elapsed += 5
 
-        if abs(current_depth - target_depth) <= DEPTH_WINDOW:
+        if leg in (1, 2, 3) and abs(current_depth - target_depth) <= DEPTH_WINDOW:
             consecutive_in_window += 1
         else:
             consecutive_in_window = 0
@@ -231,10 +234,20 @@ try:
             break
 
         if mission_complete.is_set():
-            msg = f"7 consecutive readings within window at depth {target_depth:.2f}cm. Moving to depth2 {target_depth_2:.2f}cm."
+            if leg == 1:
+                msg = f"Leg 1 complete. Moving to depth2 {target_depth_2:.2f}cm."
+                target_depth = target_depth_2
+                leg = 2
+            elif leg == 2:
+                msg = f"Leg 2 complete. Returning to depth1 {target_depth_1:.2f}cm."
+                target_depth = target_depth_1
+                leg = 3
+            elif leg == 3:
+                msg = f"Leg 3 complete. Staying at depth2 {target_depth_2:.2f}cm forever."
+                target_depth = target_depth_2
+                leg = 4
             print(msg)
             logging.info(msg)
-            target_depth = target_depth_2
             consecutive_in_window = 0
             mission_complete.clear()
 
