@@ -201,7 +201,7 @@ def data_logger():
         time.sleep(next_log - now)
         elapsed += 5
 
-        if leg in (1, 2, 3) and abs(current_depth - target_depth) <= DEPTH_WINDOW:
+        if abs(current_depth - target_depth) <= DEPTH_WINDOW:
             consecutive_in_window += 1
         else:
             consecutive_in_window = 0
@@ -246,6 +246,8 @@ try:
                 msg = f"Leg 3 complete. Staying at depth2 {target_depth_2:.2f}cm forever."
                 target_depth = target_depth_2
                 leg = 4
+            elif leg == 4:
+                msg = f"Leg 4: 7 consecutive in-window readings achieved. Continuing to hold at {target_depth_2:.2f}cm."
             print(msg)
             logging.info(msg)
             consecutive_in_window = 0
