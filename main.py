@@ -201,7 +201,7 @@ def data_logger():
         else:
             consecutive_in_window = 0
 
-        msg = f"0371A  t={elapsed}s  depth={current_depth:.2f}cm  in_window={consecutive_in_window}/{REQUIRED_CONSECUTIVE}"
+        msg = f"0371A : {elapsed} : {current_depth:.2f} : {consecutive_in_window}/{REQUIRED_CONSECUTIVE}"
         with open("collect_data.txt", "a") as f:
             f.write(msg + "\n")
 

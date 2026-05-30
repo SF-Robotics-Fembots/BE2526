@@ -70,14 +70,14 @@ echo '<tr><th>COMPANY NAME</th><th>TIME</th><th>DEPTH</th></tr>';
 $depth = array();
 $time = array();
 
-if(flock($file, LOCK_EX)) {
+if(flock($file, LOCK_SH)) {
 
      while(!feof($file)){ 
              $line = fgets($file);
 	     $parts = explode(" : ", $line);
        	     array_push($time, $parts[1]);
        	     array_push($depth, $parts[2]);
-	     echo "<tr><td height=70>$parts[0]</td><td height=70>$parts[1] s</td><td height=70>$parts[2] kPa</td><td height=70>$parts[3] m</td></tr>";
+	     echo "<tr><td height=70>$parts[0]</td><td height=70>$parts[1] s</td><td height=70>$parts[2] cm</td></tr>";
              }
              echo '</table>';
            /*  fclose($file); */
@@ -86,7 +86,7 @@ if(flock($file, LOCK_EX)) {
       echo "file cant open";
       exit;
 }
-fclose($file)
+fclose($file);
  ?>
 
 <div style="width: 100%; max-width:600px;">
