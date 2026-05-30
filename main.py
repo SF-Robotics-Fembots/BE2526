@@ -1,5 +1,6 @@
 import time
 import os
+import configparser
 import glob as globmod
 import shutil
 import DepthEval
@@ -76,12 +77,15 @@ time.sleep(2)
 
 startup()
 
-speed_divisor = float(input("Enter speed divisor (e.g. 1 for normal, 2 for half speed): "))
-shallow_threshold = float(input("Enter shallow threshold in cm (e.g. 20): "))
-max_shallow_speed = float(input("Enter max shallow sink speed in cm/s (e.g. 0.1): "))
-target_depth = float(input("Enter target depth in cm: "))
-target_depth_2 = float(input("Enter second target depth in cm: "))
-hold_duration = float(input("Enter hold duration at target depth in seconds (e.g. 30): "))
+config = configparser.ConfigParser()
+config.read("config.ini")
+cfg = config["buoyancy"]
+speed_divisor     = float(cfg["speed_divisor"])
+shallow_threshold = float(cfg["shallow_threshold"])
+max_shallow_speed = float(cfg["max_shallow_speed"])
+target_depth      = float(cfg["target_depth"])
+target_depth_2    = float(cfg["target_depth_2"])
+hold_duration     = float(cfg["hold_duration"])
 sensor.read(ms5837.OSR_8192)
 starting_sensor_depth = sensor.depth() * 100 # convert to cm 
 
