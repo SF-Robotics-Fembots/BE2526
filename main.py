@@ -68,8 +68,8 @@ def pump(direction):
         logging.info(msg)
 
 cycle=0.1 #seconds
-TOP_OFFSET = 0    # cm added to average depth to define top
-BOTTOM_OFFSET = 0  # cm added to average depth to define bottom
+ENGINE_HEIGHT = 50.0  # cm — difference between the baseline and the bottom
+TOP_OFFSET = -17.0  # cm — top of engine is 17cm above baseline
 DEPTH_WINDOW = 33.0       # cm — allowed deviation from target depth
 REQUIRED_CONSECUTIVE = 7  # consecutive 5s readings needed within window
 
@@ -92,7 +92,6 @@ starting_sensor_depth = sensor.depth() * 100 # convert to cm
 
 previous_depth = 0
 top = 0
-bottom = 0
 phase = "sinking"
 hold_start_time = None
 hold_tolerance = 5.0  # cm — considered "at target" if within this range
@@ -102,7 +101,7 @@ table = [(offset, speed / speed_divisor) for offset, speed in table]
 print(f"Loaded {len(table)} entries.")
 
 def get_depth_reading():
-    global sensor, starting_sensor_depth, top, bottom
+    global sensor, starting_sensor_depth, top
     attempts = 0
     while attempts < 3:
         readings = []
@@ -120,7 +119,6 @@ def get_depth_reading():
             if len(filtered_readings) >= 2:  # Check if we have at least two good readings after filtering
                 avg = sum(filtered_readings) / len(filtered_readings)
                 top = avg + TOP_OFFSET
-                bottom = avg + BOTTOM_OFFSET
                 return avg
 
         attempts += 1
@@ -205,7 +203,10 @@ def data_logger():
         else:
             consecutive_in_window = 0
 
-        msg = f"0371A : {elapsed} : {current_depth:.2f} : {consecutive_in_window}/{REQUIRED_CONSECUTIVE}"
+        depth_baseline = current_depth
+        depth_top = current_depth + TOP_OFFSET
+        depth_bottom = current_depth + ENGINE_HEIGHT
+        msg = f"0371A : {elapsed} : {depth_baseline:.2f} : {depth_top:.2f} : {depth_bottom:.2f} : {consecutive_in_window}/{REQUIRED_CONSECUTIVE}"
         with open("collect_data.txt", "a") as f:
             f.write(msg + "\n")
 

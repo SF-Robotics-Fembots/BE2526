@@ -65,7 +65,7 @@ $count = 0;
 $cols = 3;
 echo '<table>';
 
-echo '<tr><th>COMPANY NAME</th><th>TIME</th><th>DEPTH</th></tr>';
+echo '<tr><th>COMPANY NAME</th><th>TIME</th><th>BASELINE</th><th>DEPTH (TOP)</th><th>DEPTH (BOTTOM)</th><th>IN WINDOW</th></tr>';
 
 $depth = array();
 $time = array();
@@ -77,7 +77,7 @@ if(flock($file, LOCK_SH)) {
 	     $parts = explode(" : ", $line);
        	     array_push($time, $parts[1]);
        	     array_push($depth, $parts[2]);
-	     echo "<tr><td height=70>$parts[0]</td><td height=70>$parts[1] s</td><td height=70>$parts[2] cm</td></tr>";
+	     echo "<tr><td height=70>$parts[0]</td><td height=70>$parts[1] s</td><td height=70>$parts[2] cm</td><td height=70>$parts[3] cm</td><td height=70>$parts[4] cm</td><td height=70>$parts[5]</td></tr>";
              }
              echo '</table>';
            /*  fclose($file); */
