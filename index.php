@@ -14,25 +14,25 @@
 </head>
 
 <body>
-    <h1 class = "web_title">GENESEAS (RN08) BUOYANCY ENGINE 2024-25</h1>
+    <h1 class = "web_title">GENESEAS (0371A) BUOYANCY ENGINE 2025-2026</h1>
    <title>Current Time</title>
 
 
 <div class = "dive_bttn">
-	<form action="buoyancymovement.py" method="post">
+	<form action="main.py" method="post">
   		<input type="submit" value="Dive" name="dive" style="height:50px; width:150px; margin-bottom:50px; background:blue; color:white; font-size: 30px;">
 	</form>
 </div>
 
 
 <div class = "dive_bttn">
-	<form action="buoyancymovement.py" method="post">
+	<form action="main.py" method="post">
   		<input type="submit" value="Sample" name="sample" style="height:20px; width:65px; margin-bottom:10px; background:white; color:blue; font-size: 15px;">
 	</form>
 </div>
 
 <div class = "battery_bttn">
-	<form action="buoyancymovement.py" method="post">
+	<form action="main.py" method="post">
 		<INPUT TYPE="submit" value="battery" name="battery">
 	</form>
 </div>
@@ -62,10 +62,10 @@ table, td, th{
 EOF;
 
 $count = 0;
-$cols = 4;
+$cols = 3;
 echo '<table>';
 
-echo '<tr><th>COMPANY NAME</th><th>TIME</th><th>PRESSURE</th><th>DEPTH</th></tr>';
+echo '<tr><th>COMPANY NAME</th><th>TIME</th><th>DEPTH</th></tr>';
 
 $depth = array();
 $time = array();
@@ -76,7 +76,7 @@ if(flock($file, LOCK_EX)) {
              $line = fgets($file);
 	     $parts = explode(" : ", $line);
        	     array_push($time, $parts[1]);
-       	     array_push($depth, $parts[3]);
+       	     array_push($depth, $parts[2]);
 	     echo "<tr><td height=70>$parts[0]</td><td height=70>$parts[1] s</td><td height=70>$parts[2] kPa</td><td height=70>$parts[3] m</td></tr>";
              }
              echo '</table>';
@@ -130,9 +130,7 @@ fclose($file)
         });
         </script>
 
-<form action="buoyancymovement.py" method="post">
-  <input type="submit" value="calibrate" name="calibrate">
-</form>
+
 
 
 </body>
