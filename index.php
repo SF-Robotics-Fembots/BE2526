@@ -7,10 +7,17 @@
         <link rel = "stylesheet" href="bestyle.css" type="text/css">
 	<script src="js/chart.min.js"></script>
         <title>Geneseas Buoyancy Engine</title>
-	<html lang="en">
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+	<style>
+	table, td, th {
+		table-layout: fixed;
+		width: 100%;
+		border-collapse: collapse;
+		border: 3px solid black;
+		text-align: center;
+	}
+	</style>
 </head>
 
 <body>
@@ -48,18 +55,6 @@ if(!$file){
 
 
       
-
-echo <<<EOF
-<style>
-table, td, th{
-        table-layout: fixed;
-        width: 100%;
-        border-collapse: collapse;
-        border: 3px solid black;
-        text-align: center;
-}
-</style>
-EOF;
 
 $count = 0;
 $cols = 3;
