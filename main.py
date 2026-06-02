@@ -11,20 +11,26 @@ import RPi.GPIO as GPIO
 import threading
 import logging
 
-# Archive existing buoy.log to next numbered file
-if os.path.exists("buoy.log"):
-    existing = globmod.glob("buoy_*.log")
-    nums = [int(f.replace("buoy_", "").replace(".log", "")) for f in existing if f.replace("buoy_", "").replace(".log", "").isdigit()]
-    next_num = max(nums) + 1 if nums else 1
-    shutil.copy2("buoy.log", f"buoy_{next_num}.log")
-    open("buoy.log", "w").close()
+def setup_logging(rotate=False):
+    if rotate and os.path.exists("buoy.log"):
+        try:
+            existing = globmod.glob("buoy_*.log")
+            nums = [int(f.replace("buoy_", "").replace(".log", "")) for f in existing if f.replace("buoy_", "").replace(".log", "").isdigit()]
+            next_num = max(nums) + 1 if nums else 1
+            shutil.copy2("buoy.log", f"buoy_{next_num}.log")
+            open("buoy.log", "w").close()
+        except OSError:
+            pass
 
-logging.basicConfig(
-    filename="buoy.log",
-    level=logging.INFO,
-    format="%(asctime)s %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
+    try:
+        logging.basicConfig(
+            filename="buoy.log",
+            level=logging.INFO,
+            format="%(asctime)s %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
+    except OSError:
+        logging.basicConfig(level=logging.INFO, handlers=[logging.NullHandler()])
 
 sensor = ms5837.MS5837_02BA()
 
@@ -71,6 +77,7 @@ ENGINE_HEIGHT = 50.0  # cm — difference between the baseline and the bottom
 TOP_OFFSET = -17.0  # cm — top of engine is 17cm above baseline
 DEPTH_WINDOW = 33.0       # cm — allowed deviation from target depth
 REQUIRED_CONSECUTIVE = 7  # consecutive 5s readings needed within window
+DATA_FILE = "collect_data.txt"
 
 speed_divisor = 1.0
 shallow_threshold = 0.0
@@ -219,7 +226,7 @@ def data_logger():
         depth_top = current_depth + TOP_OFFSET
         depth_bottom = current_depth + ENGINE_HEIGHT
         msg = f"0371A : {elapsed} : {depth_baseline:.2f} : {depth_top:.2f} : {depth_bottom:.2f} : {consecutive_in_window}/{REQUIRED_CONSECUTIVE}"
-        with open("collect_data.txt", "a") as f:
+        with open(DATA_FILE, "a") as f:
             f.write(msg + "\n")
 
         if consecutive_in_window >= REQUIRED_CONSECUTIVE:
@@ -229,7 +236,7 @@ def dive():
     global consecutive_in_window, current_depth, target_depth, leg
 
     initialize_dive()
-    open("collect_data.txt", "w").close()  # erase on startup
+    open(DATA_FILE, "w").close()  # erase on startup
     mission_complete.clear()
     consecutive_in_window = 0
     previous_depth = 0
@@ -276,7 +283,24 @@ def dive():
 
 
 def sample():
-    msg = "Sample button pressed. sample() placeholder has not been implemented yet."
+    elapsed = 5
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "r") as f:
+            for line in f:
+                parts = line.strip().split(" : ")
+                if len(parts) >= 2 and parts[1].isdigit():
+                    elapsed = int(parts[1]) + 5
+
+    depth_baseline = 0.00
+    depth_top = depth_baseline + TOP_OFFSET
+    depth_bottom = depth_baseline + ENGINE_HEIGHT
+    in_window = f"0/{REQUIRED_CONSECUTIVE}"
+    row = f"0371A : {elapsed} : {depth_baseline:.2f} : {depth_top:.2f} : {depth_bottom:.2f} : {in_window}"
+
+    with open(DATA_FILE, "a") as f:
+        f.write(row + "\n")
+
+    msg = "Sample row added."
     print(msg)
     logging.info(msg)
 
@@ -292,6 +316,8 @@ def run_button_action():
         action = sys.argv[1]
     else:
         action = None
+
+    setup_logging(rotate=action == "dive")
 
     if action == "dive":
         dive()

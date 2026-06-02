@@ -63,7 +63,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 <?php
 
-$file = fopen("collect_data.txt", "rb");
+$dataFile = "collect_data.txt";
+if (!file_exists($dataFile)) {
+	touch($dataFile);
+}
+
+$file = fopen($dataFile, "rb");
 
 if(!$file){
         echo "file cant open";
@@ -86,7 +91,13 @@ if(flock($file, LOCK_SH)) {
 
      while(!feof($file)){ 
              $line = fgets($file);
+	     if (trim($line) === "") {
+		     continue;
+	     }
 	     $parts = explode(" : ", $line);
+	     if (count($parts) < 6) {
+		     continue;
+	     }
        	     array_push($time, $parts[1]);
        	     array_push($depth, $parts[2]);
 	     echo "<tr><td height=70>$parts[0]</td><td height=70>$parts[1] s</td><td height=70>$parts[2] cm</td><td height=70>$parts[3] cm</td><td height=70>$parts[4] cm</td><td height=70>$parts[5]</td></tr>";
