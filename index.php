@@ -1,16 +1,21 @@
 <?php
-$buttonMessage = "";
-
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 	if (isset($_POST["dive"])) {
 		exec("python3 main.py dive > /dev/null 2>&1 &");
-		$buttonMessage = "Dive started.";
+		header("Location: index.php?msg=Dive+started.");
 	} elseif (isset($_POST["sample"])) {
-		$buttonMessage = trim(shell_exec("python3 main.py sample 2>&1"));
+		$result = trim(shell_exec("python3 main.py sample 2>&1"));
+		file_put_contents("last_message.txt", $result);
+		header("Location: index.php?msg=Sample+complete.");
 	} elseif (isset($_POST["battery"])) {
-		$buttonMessage = trim(shell_exec("python3 main.py battery 2>&1"));
+		$result = trim(shell_exec("python3 main.py battery 2>&1"));
+		file_put_contents("last_message.txt", $result);
+		header("Location: index.php?msg=Battery+checked.");
 	}
+	exit;
 }
+
+$buttonMessage = isset($_GET["msg"]) ? $_GET["msg"] : "";
 ?>
 <!DOCTYPE html>
 <html>
