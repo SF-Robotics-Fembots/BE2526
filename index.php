@@ -1,4 +1,17 @@
+<?php
+$buttonMessage = "";
 
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+	if (isset($_POST["dive"])) {
+		exec("python3 main.py dive > /dev/null 2>&1 &");
+		$buttonMessage = "Dive started.";
+	} elseif (isset($_POST["sample"])) {
+		$buttonMessage = trim(shell_exec("python3 main.py sample 2>&1"));
+	} elseif (isset($_POST["battery"])) {
+		$buttonMessage = trim(shell_exec("python3 main.py battery 2>&1"));
+	}
+}
+?>
 <!DOCTYPE html>
 <html>
 <head>
@@ -26,23 +39,27 @@
 
 
 <div class = "dive_bttn">
-	<form action="main.py" method="post">
+	<form action="index.php" method="post">
   		<input type="submit" value="Dive" name="dive" style="height:50px; width:150px; margin-bottom:50px; background:blue; color:white; font-size: 30px;">
 	</form>
 </div>
 
 
 <div class = "dive_bttn">
-	<form action="main.py" method="post">
+	<form action="index.php" method="post">
   		<input type="submit" value="Sample" name="sample" style="height:20px; width:65px; margin-bottom:10px; background:white; color:blue; font-size: 15px;">
 	</form>
 </div>
 
 <div class = "battery_bttn">
-	<form action="main.py" method="post">
+	<form action="index.php" method="post">
 		<INPUT TYPE="submit" value="battery" name="battery">
 	</form>
 </div>
+
+<?php if ($buttonMessage !== "") { ?>
+	<p><?php echo htmlspecialchars($buttonMessage); ?></p>
+<?php } ?>
 
 <?php
 

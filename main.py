@@ -1,5 +1,6 @@
 import time
 import os
+import sys
 import cgi
 import cgitb
 import configparser
@@ -291,14 +292,24 @@ def battery_level():
 
 
 def run_button_action():
-    form = cgi.FieldStorage()
-    print("Content-Type: text/plain\n")
+    if len(sys.argv) > 1:
+        action = sys.argv[1]
+    else:
+        form = cgi.FieldStorage()
+        print("Content-Type: text/plain\n")
+        action = None
+        if "dive" in form:
+            action = "dive"
+        elif "sample" in form:
+            action = "sample"
+        elif "battery" in form:
+            action = "battery"
 
-    if "dive" in form:
+    if action == "dive":
         dive()
-    elif "sample" in form:
+    elif action == "sample":
         sample()
-    elif "battery" in form:
+    elif action == "battery":
         battery_level()
     else:
         print("No recognized button was pressed.")
