@@ -51,6 +51,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 	</form>
 </div>
 
+<?php
+$sampleFile = "sample_data.txt";
+if (file_exists($sampleFile)) {
+	$sampleLine = trim(file_get_contents($sampleFile));
+	$sampleParts = explode(" : ", $sampleLine);
+	if (count($sampleParts) >= 6) {
+		echo '<table>';
+		echo '<tr><th>COMPANY NAME</th><th>TIME</th><th>BASELINE</th><th>DEPTH (TOP)</th><th>DEPTH (BOTTOM)</th><th>SAMPLE</th></tr>';
+		echo '<tr><td height=70>' . htmlspecialchars($sampleParts[0]) . '</td><td height=70>' . htmlspecialchars($sampleParts[1]) . ' s</td><td height=70>' . htmlspecialchars($sampleParts[2]) . ' cm</td><td height=70>' . htmlspecialchars($sampleParts[3]) . ' cm</td><td height=70>' . htmlspecialchars($sampleParts[4]) . ' cm</td><td height=70>' . htmlspecialchars($sampleParts[5]) . '</td></tr>';
+		echo '</table>';
+	}
+}
+?>
+
 <div class = "battery_bttn">
 	<form action="index.php" method="post">
 		<INPUT TYPE="submit" value="battery" name="battery">

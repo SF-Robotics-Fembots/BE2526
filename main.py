@@ -78,6 +78,7 @@ TOP_OFFSET = -17.0  # cm — top of engine is 17cm above baseline
 DEPTH_WINDOW = 33.0       # cm — allowed deviation from target depth
 REQUIRED_CONSECUTIVE = 7  # consecutive 5s readings needed within window
 DATA_FILE = "collect_data.txt"
+SAMPLE_FILE = "sample_data.txt"
 
 speed_divisor = 1.0
 shallow_threshold = 0.0
@@ -291,13 +292,15 @@ def sample():
                 if len(parts) >= 2 and parts[1].isdigit():
                     elapsed = int(parts[1]) + 5
 
-    depth_baseline = 0.00
+    startup()
+    sensor.read(ms5837.OSR_8192)
+    depth_baseline = sensor.depth() * 100
     depth_top = depth_baseline + TOP_OFFSET
     depth_bottom = depth_baseline + ENGINE_HEIGHT
-    in_window = f"0/{REQUIRED_CONSECUTIVE}"
+    in_window = f"SAMPLE"
     row = f"0371A : {elapsed} : {depth_baseline:.2f} : {depth_top:.2f} : {depth_bottom:.2f} : {in_window}"
 
-    with open(DATA_FILE, "a") as f:
+    with open(SAMPLE_FILE, "w") as f:
         f.write(row + "\n")
 
     msg = "Sample row added."
