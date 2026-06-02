@@ -1,5 +1,7 @@
 import time
 import os
+import cgi
+import cgitb
 import configparser
 import glob as globmod
 import shutil
@@ -9,6 +11,8 @@ import smbus
 import RPi.GPIO as GPIO
 import threading
 import logging
+
+cgitb.enable()
 
 # Archive existing buoy.log to next numbered file
 if os.path.exists("buoy.log"):
@@ -25,9 +29,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-print("Starting sensor")
 sensor = ms5837.MS5837_02BA()
-print("Sensor started")
 
 DEBUG = 1
 
@@ -73,35 +75,51 @@ TOP_OFFSET = -17.0  # cm — top of engine is 17cm above baseline
 DEPTH_WINDOW = 33.0       # cm — allowed deviation from target depth
 REQUIRED_CONSECUTIVE = 7  # consecutive 5s readings needed within window
 
-time.sleep(2)
-
-startup()
-
-config = configparser.ConfigParser()
-config.read("config.ini")
-cfg = config["buoyancy"]
-speed_divisor     = float(cfg["speed_divisor"])
-shallow_threshold = float(cfg["shallow_threshold"])
-max_shallow_speed = float(cfg["max_shallow_speed"])
-target_depth      = float(cfg["target_depth"])
-target_depth_2    = float(cfg["target_depth_2"])
-hold_duration     = float(cfg["hold_duration"])
-sensor.read(ms5837.OSR_8192)
-starting_sensor_depth = sensor.depth() * 100 # convert to cm 
-
-
-target_depth_1 = target_depth  # save original to return to after depth2
-leg = 1  # 1: depth1 hold, 2: depth2 hold, 3: depth1 hold again, 4: depth2 forever
-
-previous_depth = 0
+speed_divisor = 1.0
+shallow_threshold = 0.0
+max_shallow_speed = 0.0
+target_depth = 0.0
+target_depth_1 = 0.0
+target_depth_2 = 0.0
+hold_duration = 0.0
+starting_sensor_depth = 0.0
+leg = 1
+current_depth = 0.0
 top = 0
 phase = "sinking"
 hold_start_time = None
 hold_tolerance = 5.0  # cm — considered "at target" if within this range
 
-table = DepthEval.load_speed_table("speeds.csv")
-table = [(offset, speed / speed_divisor) for offset, speed in table]
-print(f"Loaded {len(table)} entries.")
+table = []
+mission_complete = threading.Event()
+consecutive_in_window = 0
+
+def initialize_dive():
+    global speed_divisor, shallow_threshold, max_shallow_speed
+    global target_depth, target_depth_1, target_depth_2, hold_duration
+    global starting_sensor_depth, leg, table
+
+    time.sleep(2)
+    startup()
+
+    config = configparser.ConfigParser()
+    config.read("config.ini")
+    cfg = config["buoyancy"]
+    speed_divisor     = float(cfg["speed_divisor"])
+    shallow_threshold = float(cfg["shallow_threshold"])
+    max_shallow_speed = float(cfg["max_shallow_speed"])
+    target_depth      = float(cfg["target_depth"])
+    target_depth_2    = float(cfg["target_depth_2"])
+    hold_duration     = float(cfg["hold_duration"])
+    sensor.read(ms5837.OSR_8192)
+    starting_sensor_depth = sensor.depth() * 100 # convert to cm
+
+    target_depth_1 = target_depth  # save original to return to after depth2
+    leg = 1  # 1: depth1 hold, 2: depth2 hold, 3: depth1 hold again, 4: depth2 forever
+
+    table = DepthEval.load_speed_table("speeds.csv")
+    table = [(offset, speed / speed_divisor) for offset, speed in table]
+    print(f"Loaded {len(table)} entries.")
 
 def get_depth_reading():
     global sensor, starting_sensor_depth, top
@@ -186,12 +204,6 @@ def move_motor(current_depth, actual_speed, depth_offset):
     return False
 
 
-open("collect_data.txt", "w").close()  # erase on startup
-
-mission_complete = threading.Event()
-
-consecutive_in_window = 0
-
 def data_logger():
     global consecutive_in_window
     elapsed = 0
@@ -216,10 +228,18 @@ def data_logger():
         if consecutive_in_window >= REQUIRED_CONSECUTIVE:
             mission_complete.set()
 
-logger_thread = threading.Thread(target=data_logger, daemon=True)
-logger_thread.start()
+def dive():
+    global consecutive_in_window, current_depth, target_depth, leg
 
-try:
+    initialize_dive()
+    open("collect_data.txt", "w").close()  # erase on startup
+    mission_complete.clear()
+    consecutive_in_window = 0
+    previous_depth = 0
+
+    logger_thread = threading.Thread(target=data_logger, daemon=True)
+    logger_thread.start()
+
     while True:
         print("Starting Main Loop")
         current_depth = get_depth_reading()
@@ -258,6 +278,38 @@ try:
         time.sleep(cycle)
 
 
-except KeyboardInterrupt:
-    #press Ctrl+C, clean up the config
-    GPIO.cleanup()
+def sample():
+    msg = "Sample button pressed. sample() placeholder has not been implemented yet."
+    print(msg)
+    logging.info(msg)
+
+
+def battery_level():
+    msg = "Battery level: 5.7 volts"
+    print(msg)
+    logging.info(msg)
+
+
+def run_button_action():
+    form = cgi.FieldStorage()
+    print("Content-Type: text/plain\n")
+
+    if "dive" in form:
+        dive()
+    elif "sample" in form:
+        sample()
+    elif "battery" in form:
+        battery_level()
+    else:
+        print("No recognized button was pressed.")
+
+
+if __name__ == "__main__":
+    try:
+        run_button_action()
+    except KeyboardInterrupt:
+        GPIO.cleanup()
+    except Exception as e:
+        msg = f"main.py failed: {e}"
+        print(msg)
+        logging.exception(msg)
