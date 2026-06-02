@@ -4,6 +4,8 @@ import sys
 import configparser
 import glob as globmod
 import shutil
+import signal
+import subprocess
 import DepthEval
 import ms5837
 import smbus
@@ -81,6 +83,29 @@ def pump(direction):
         print(msg)
         logging.info(msg)
 
+def pump_stop():
+    GPIO.output(GPIO_IN, GPIO.LOW)
+    GPIO.output(GPIO_OUT, GPIO.LOW)
+    msg = "Pump stopped."
+    print(msg)
+    logging.info(msg)
+
+def remove_pid_file():
+    try:
+        if os.path.exists(PID_FILE):
+            os.remove(PID_FILE)
+    except OSError:
+        pass
+
+def shutdown_handler(signum=None, frame=None):
+    msg = "Stop requested. Shutting down."
+    print(msg)
+    logging.info(msg)
+    pump_stop()
+    remove_pid_file()
+    GPIO.cleanup()
+    sys.exit(0)
+
 cycle=0.1 #seconds
 ENGINE_HEIGHT = 50.0  # cm — difference between the baseline and the bottom
 TOP_OFFSET = -17.0  # cm — top of engine is 17cm above baseline
@@ -88,6 +113,7 @@ DEPTH_WINDOW = 33.0       # cm — allowed deviation from target depth
 REQUIRED_CONSECUTIVE = 7  # consecutive 5s readings needed within window
 DATA_FILE = "collect_data.txt"
 SAMPLE_FILE = "sample_data.txt"
+PID_FILE = "main.pid"
 
 speed_divisor = 1.0
 shallow_threshold = 0.0
@@ -244,51 +270,58 @@ def data_logger():
 def dive():
     global consecutive_in_window, current_depth, target_depth, leg
 
-    initialize_dive()
-    open(DATA_FILE, "w").close()  # erase on startup
-    mission_complete.clear()
-    consecutive_in_window = 0
-    previous_depth = 0
+    with open(PID_FILE, "w") as f:
+        f.write(str(os.getpid()))
 
-    logger_thread = threading.Thread(target=data_logger, daemon=True)
-    logger_thread.start()
+    try:
+        initialize_dive()
+        open(DATA_FILE, "w").close()  # erase on startup
+        mission_complete.clear()
+        consecutive_in_window = 0
+        previous_depth = 0
 
-    while True:
-        print("Starting Main Loop")
-        current_depth = get_depth_reading()
+        logger_thread = threading.Thread(target=data_logger, daemon=True)
+        logger_thread.start()
 
-        # calculate speed
-        actual_speed = (current_depth - previous_depth) / cycle  # positive when sinking
+        while True:
+            print("Starting Main Loop")
+            current_depth = get_depth_reading()
 
-        # calculate offset
-        depth_offset = current_depth - target_depth  # negative means too high, positive means too low
+            # calculate speed
+            actual_speed = (current_depth - previous_depth) / cycle  # positive when sinking
 
-        if move_motor(current_depth, actual_speed, depth_offset):
-            break
+            # calculate offset
+            depth_offset = current_depth - target_depth  # negative means too high, positive means too low
 
-        if mission_complete.is_set():
-            if leg == 1:
-                msg = f"Leg 1 complete. Moving to depth2 {target_depth_2:.2f}cm."
-                target_depth = target_depth_2
-                leg = 2
-            elif leg == 2:
-                msg = f"Leg 2 complete. Returning to depth1 {target_depth_1:.2f}cm."
-                target_depth = target_depth_1
-                leg = 3
-            elif leg == 3:
-                msg = f"Leg 3 complete. Staying at depth2 {target_depth_2:.2f}cm forever."
-                target_depth = target_depth_2
-                leg = 4
-            elif leg == 4:
-                msg = f"Leg 4: 7 consecutive in-window readings achieved. Continuing to hold at {target_depth_2:.2f}cm."
-            print(msg)
-            logging.info(msg)
-            consecutive_in_window = 0
-            mission_complete.clear()
+            if move_motor(current_depth, actual_speed, depth_offset):
+                break
 
-        previous_depth = current_depth
+            if mission_complete.is_set():
+                if leg == 1:
+                    msg = f"Leg 1 complete. Moving to depth2 {target_depth_2:.2f}cm."
+                    target_depth = target_depth_2
+                    leg = 2
+                elif leg == 2:
+                    msg = f"Leg 2 complete. Returning to depth1 {target_depth_1:.2f}cm."
+                    target_depth = target_depth_1
+                    leg = 3
+                elif leg == 3:
+                    msg = f"Leg 3 complete. Staying at depth2 {target_depth_2:.2f}cm forever."
+                    target_depth = target_depth_2
+                    leg = 4
+                elif leg == 4:
+                    msg = f"Leg 4: 7 consecutive in-window readings achieved. Continuing to hold at {target_depth_2:.2f}cm."
+                print(msg)
+                logging.info(msg)
+                consecutive_in_window = 0
+                mission_complete.clear()
 
-        time.sleep(cycle)
+            previous_depth = current_depth
+
+            time.sleep(cycle)
+    finally:
+        pump_stop()
+        remove_pid_file()
 
 
 def sample():
@@ -313,6 +346,37 @@ def battery_level():
     print(msg)
     logging.info(msg)
 
+def stop_dive():
+    pid = None
+    if os.path.exists(PID_FILE):
+        try:
+            with open(PID_FILE, "r") as f:
+                pid = int(f.read().strip())
+        except (OSError, ValueError):
+            pid = None
+
+    if pid and pid != os.getpid():
+        try:
+            os.kill(pid, signal.SIGTERM)
+            deadline = time.time() + 5
+            while time.time() < deadline:
+                try:
+                    os.kill(pid, 0)
+                    time.sleep(0.1)
+                except OSError:
+                    break
+            else:
+                os.kill(pid, signal.SIGKILL)
+            print(f"Stopped dive process {pid}.")
+        except OSError as e:
+            print(f"Dive process was not running: {e}")
+    else:
+        subprocess.run(["pkill", "-TERM", "-f", "python3 main.py dive"], check=False)
+        print("Stop command sent.")
+
+    pump_stop()
+    remove_pid_file()
+
 
 def run_button_action():
     if len(sys.argv) > 1:
@@ -323,11 +387,15 @@ def run_button_action():
     setup_logging(rotate=action == "dive")
 
     if action == "dive":
+        signal.signal(signal.SIGTERM, shutdown_handler)
+        signal.signal(signal.SIGINT, shutdown_handler)
         dive()
     elif action == "sample":
         sample()
     elif action == "battery":
         battery_level()
+    elif action == "stop":
+        stop_dive()
     else:
         print("No recognized button was pressed.")
 
@@ -336,8 +404,12 @@ if __name__ == "__main__":
     try:
         run_button_action()
     except KeyboardInterrupt:
+        pump_stop()
+        remove_pid_file()
         GPIO.cleanup()
     except Exception as e:
         msg = f"main.py failed: {e}"
         print(msg)
         logging.exception(msg)
+        pump_stop()
+        remove_pid_file()
