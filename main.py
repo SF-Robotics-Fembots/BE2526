@@ -1,8 +1,6 @@
 import time
 import os
 import sys
-import cgi
-import cgitb
 import configparser
 import glob as globmod
 import shutil
@@ -12,8 +10,6 @@ import smbus
 import RPi.GPIO as GPIO
 import threading
 import logging
-
-cgitb.enable()
 
 # Archive existing buoy.log to next numbered file
 if os.path.exists("buoy.log"):
@@ -295,15 +291,7 @@ def run_button_action():
     if len(sys.argv) > 1:
         action = sys.argv[1]
     else:
-        form = cgi.FieldStorage()
-        print("Content-Type: text/plain\n")
         action = None
-        if "dive" in form:
-            action = "dive"
-        elif "sample" in form:
-            action = "sample"
-        elif "battery" in form:
-            action = "battery"
 
     if action == "dive":
         dive()
