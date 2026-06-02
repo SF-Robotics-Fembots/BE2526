@@ -58,6 +58,15 @@ def startup():
 #	print("prep to set density")
 	sensor.setFluidDensity(ms5837.DENSITY_FRESHWATER)
 
+def calibrate_baseline():
+    global starting_sensor_depth
+    sensor.read(ms5837.OSR_8192)
+    starting_sensor_depth = sensor.depth() * 100 # convert to cm
+    msg = f"Baseline calibrated at {starting_sensor_depth:.2f} cm"
+    print(msg)
+    logging.info(msg)
+    return starting_sensor_depth
+
 def pump(direction):
     if direction == 1:  # Water In
         GPIO.output(GPIO_IN, GPIO.HIGH)
@@ -116,8 +125,7 @@ def initialize_dive():
     target_depth      = float(cfg["target_depth"])
     target_depth_2    = float(cfg["target_depth_2"])
     hold_duration     = float(cfg["hold_duration"])
-    sensor.read(ms5837.OSR_8192)
-    starting_sensor_depth = sensor.depth() * 100 # convert to cm
+    calibrate_baseline()
 
     target_depth_1 = target_depth  # save original to return to after depth2
     leg = 1  # 1: depth1 hold, 2: depth2 hold, 3: depth1 hold again, 4: depth2 forever
@@ -284,21 +292,13 @@ def dive():
 
 
 def sample():
-    elapsed = 5
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r") as f:
-            for line in f:
-                parts = line.strip().split(" : ")
-                if len(parts) >= 2 and parts[1].isdigit():
-                    elapsed = int(parts[1]) + 5
-
     startup()
-    sensor.read(ms5837.OSR_8192)
-    depth_baseline = sensor.depth() * 100
+    calibrate_baseline()
+    depth_baseline = get_depth_reading()
     depth_top = depth_baseline + TOP_OFFSET
     depth_bottom = depth_baseline + ENGINE_HEIGHT
     in_window = f"SAMPLE"
-    row = f"0371A : {elapsed} : {depth_baseline:.2f} : {depth_top:.2f} : {depth_bottom:.2f} : {in_window}"
+    row = f"0371A : NA : {depth_baseline:.2f} : {depth_top:.2f} : {depth_bottom:.2f} : {in_window}"
 
     with open(SAMPLE_FILE, "w") as f:
         f.write(row + "\n")
