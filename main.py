@@ -40,16 +40,27 @@ DEBUG = 1
 
 GPIO_IN = 5
 GPIO_OUT = 6
+RELAY_ACTIVE_LOW = False
+RELAY_ACTIVE_LEVEL = GPIO.LOW if RELAY_ACTIVE_LOW else GPIO.HIGH
+RELAY_INACTIVE_LEVEL = GPIO.HIGH if RELAY_ACTIVE_LOW else GPIO.LOW
 
 # Set the GPIO mode (BOARD)
+GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
 
 
 # Set the relay pin as an output pin
 GPIO.setup(GPIO_IN, GPIO.OUT)
 GPIO.setup(GPIO_OUT, GPIO.OUT)
-GPIO.output(GPIO_IN, GPIO.LOW)
-GPIO.output(GPIO_OUT, GPIO.LOW)
+GPIO.output(GPIO_IN, RELAY_INACTIVE_LEVEL)
+GPIO.output(GPIO_OUT, RELAY_INACTIVE_LEVEL)
+
+def set_pump_pins_inactive(repeats=3, delay=0.05):
+    for _ in range(repeats):
+        GPIO.output(GPIO_IN, RELAY_INACTIVE_LEVEL)
+        GPIO.output(GPIO_OUT, RELAY_INACTIVE_LEVEL)
+        if delay:
+            time.sleep(delay)
 
 def startup():
 #	print("prep to init")
@@ -71,21 +82,26 @@ def calibrate_baseline():
 
 def pump(direction):
     if direction == 1:  # Water In
-        GPIO.output(GPIO_IN, GPIO.HIGH)
-        GPIO.output(GPIO_OUT, GPIO.LOW)
+        GPIO.output(GPIO_OUT, RELAY_INACTIVE_LEVEL)
+        GPIO.output(GPIO_IN, RELAY_ACTIVE_LEVEL)
         msg = (f"Water IN EXECUTION  ")
         print(msg)
         logging.info(msg)
     else:  # Water Out
-        GPIO.output(GPIO_IN, GPIO.LOW)
-        GPIO.output(GPIO_OUT, GPIO.HIGH)
+        GPIO.output(GPIO_IN, RELAY_INACTIVE_LEVEL)
+        GPIO.output(GPIO_OUT, RELAY_ACTIVE_LEVEL)
         msg = (f"Water OUT EXECUTION  ")
         print(msg)
         logging.info(msg)
 
 def pump_stop():
-    GPIO.output(GPIO_IN, GPIO.LOW)
-    GPIO.output(GPIO_OUT, GPIO.LOW)
+    try:
+        set_pump_pins_inactive(repeats=5)
+    except Exception as e:
+        print(f"Pump stop failed: {e}")
+        logging.exception("Pump stop failed")
+        return
+
     msg = "Pump stopped."
     print(msg)
     logging.info(msg)
@@ -103,7 +119,7 @@ def shutdown_handler(signum=None, frame=None):
     logging.info(msg)
     pump_stop()
     remove_pid_file()
-    GPIO.cleanup()
+    # Keep the relay pins driven inactive so the motor cannot float back on.
     sys.exit(0)
 
 cycle=0.1 #seconds
@@ -346,33 +362,95 @@ def battery_level():
     print(msg)
     logging.info(msg)
 
-def stop_dive():
-    pid = None
+def find_dive_pids():
+    pids = set()
     if os.path.exists(PID_FILE):
         try:
             with open(PID_FILE, "r") as f:
-                pid = int(f.read().strip())
+                pids.add(int(f.read().strip()))
         except (OSError, ValueError):
-            pid = None
+            pass
 
-    if pid and pid != os.getpid():
+    try:
+        result = subprocess.run(
+            ["pgrep", "-f", "main.py dive"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        for line in result.stdout.splitlines():
+            try:
+                pids.add(int(line.strip()))
+            except ValueError:
+                pass
+    except OSError:
+        pass
+
+    pids.discard(os.getpid())
+    return pids
+
+def is_process_running(pid):
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+def stop_dive():
+    pump_stop()
+
+    pids = find_dive_pids()
+    if not pids:
+        print("No dive process found. Pump pins held inactive.")
+        remove_pid_file()
+        return
+
+    for pid in pids:
         try:
-            os.kill(pid, signal.SIGTERM)
-            deadline = time.time() + 5
-            while time.time() < deadline:
-                try:
-                    os.kill(pid, 0)
-                    time.sleep(0.1)
-                except OSError:
-                    break
-            else:
-                os.kill(pid, signal.SIGKILL)
-            print(f"Stopped dive process {pid}.")
+            os.kill(pid, signal.SIGINT)
+            print(f"Ctrl+C signal sent to dive process {pid}.")
         except OSError as e:
-            print(f"Dive process was not running: {e}")
-    else:
-        subprocess.run(["pkill", "-TERM", "-f", "python3 main.py dive"], check=False)
-        print("Stop command sent.")
+            print(f"Dive process {pid} was not running: {e}")
+
+    deadline = time.time() + 5
+    while time.time() < deadline:
+        try:
+            set_pump_pins_inactive(repeats=1, delay=0)
+        except Exception as e:
+            print(f"Could not hold pump pins inactive while stopping: {e}")
+            logging.exception("Could not hold pump pins inactive while stopping")
+        remaining = [pid for pid in pids if is_process_running(pid)]
+        if not remaining:
+            break
+        time.sleep(0.1)
+
+    for pid in pids:
+        if is_process_running(pid):
+            try:
+                os.kill(pid, signal.SIGTERM)
+                print(f"Terminate signal sent to dive process {pid}.")
+            except OSError as e:
+                print(f"Dive process {pid} could not be terminated: {e}")
+
+    deadline = time.time() + 3
+    while time.time() < deadline:
+        try:
+            set_pump_pins_inactive(repeats=1, delay=0)
+        except Exception as e:
+            print(f"Could not hold pump pins inactive while terminating: {e}")
+            logging.exception("Could not hold pump pins inactive while terminating")
+        remaining = [pid for pid in pids if is_process_running(pid)]
+        if not remaining:
+            break
+        time.sleep(0.1)
+
+    for pid in pids:
+        if is_process_running(pid):
+            try:
+                os.kill(pid, signal.SIGKILL)
+                print(f"Force killed dive process {pid}.")
+            except OSError as e:
+                print(f"Dive process {pid} could not be force killed: {e}")
 
     pump_stop()
     remove_pid_file()
@@ -406,7 +484,6 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         pump_stop()
         remove_pid_file()
-        GPIO.cleanup()
     except Exception as e:
         msg = f"main.py failed: {e}"
         print(msg)
