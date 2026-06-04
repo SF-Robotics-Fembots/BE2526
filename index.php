@@ -39,6 +39,18 @@ $buttonMessage = isset($_GET["msg"]) ? $_GET["msg"] : "";
 		border: 3px solid black;
 		text-align: center;
 	}
+	tr.in-window-packet td {
+		background-color: #dff5df;
+		border-top: 4px solid #128a28;
+		border-bottom: 4px solid #128a28;
+	}
+	tr.in-window-packet td:first-child {
+		border-left: 4px solid #128a28;
+	}
+	tr.in-window-packet td:last-child {
+		border-right: 4px solid #128a28;
+		font-weight: bold;
+	}
 	</style>
 </head>
 
@@ -115,6 +127,7 @@ echo '<tr><th>COMPANY NAME</th><th>TIME</th><th>BASELINE</th><th>DEPTH (TOP)</th
 
 $depth = array();
 $time = array();
+$rows = array();
 
 if(flock($file, LOCK_SH)) {
 
@@ -129,8 +142,42 @@ if(flock($file, LOCK_SH)) {
 	     }
        	     array_push($time, $parts[1]);
        	     array_push($depth, $parts[2]);
-	     echo "<tr><td height=70>$parts[0]</td><td height=70>$parts[1] s</td><td height=70>$parts[2] cm</td><td height=70>$parts[3] cm</td><td height=70>$parts[4] cm</td><td height=70>$parts[5]</td></tr>";
+	     $inWindowText = trim($parts[5]);
+	     $inWindowCount = intval(explode("/", $inWindowText)[0]);
+	     $rows[] = array(
+		     "parts" => $parts,
+		     "in_window_text" => $inWindowText,
+		     "in_window_count" => $inWindowCount,
+		     "highlight" => false,
+	     );
              }
+
+	     $requiredPackets = 7;
+	     for ($i = 0; $i < count($rows); $i++) {
+		     if ($rows[$i]["in_window_count"] === $requiredPackets) {
+			     $start = $i - ($requiredPackets - 1);
+			     $isConsecutiveRun = $start >= 0;
+
+			     for ($j = $start; $j <= $i && $isConsecutiveRun; $j++) {
+				     $expectedCount = $j - $start + 1;
+				     if ($rows[$j]["in_window_count"] !== $expectedCount) {
+					     $isConsecutiveRun = false;
+				     }
+			     }
+
+			     if ($isConsecutiveRun) {
+				     for ($j = $start; $j <= $i; $j++) {
+					     $rows[$j]["highlight"] = true;
+				     }
+			     }
+		     }
+	     }
+
+	     foreach ($rows as $row) {
+		     $parts = $row["parts"];
+		     $rowClass = $row["highlight"] ? ' class="in-window-packet"' : '';
+		     echo '<tr' . $rowClass . '><td height=70>' . htmlspecialchars($parts[0]) . '</td><td height=70>' . htmlspecialchars($parts[1]) . ' s</td><td height=70>' . htmlspecialchars($parts[2]) . ' cm</td><td height=70>' . htmlspecialchars($parts[3]) . ' cm</td><td height=70>' . htmlspecialchars($parts[4]) . ' cm</td><td height=70>' . htmlspecialchars($row["in_window_text"]) . '</td></tr>';
+	     }
              echo '</table>';
            /*  fclose($file); */
 
