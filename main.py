@@ -98,9 +98,15 @@ def pump_stop():
     try:
         GPIO.output(GPIO_IN, 0)
         GPIO.output(GPIO_OUT, 0)
+        msg = "Pump Trying to Stop."
+        print(msg)
+        logging.info(msg)
         print(f"Alexa Pump stop")
  #       set_pump_pins_inactive(repeats=5)
     except Exception as e:
+        msg = "Pump Exception."
+        print(msg)
+        logging.info(msg)
         print(f"Pump stop failed: {e}")
         logging.exception("Pump stop failed")
         return
