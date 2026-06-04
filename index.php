@@ -1,18 +1,20 @@
 <?php
+chdir(__DIR__);
+
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 	if (isset($_POST["dive"])) {
-		exec("python3 main.py dive > /dev/null 2>&1 &");
+		exec("cd " . escapeshellarg(__DIR__) . " && python3 main.py dive > /dev/null 2>&1 &");
 		header("Location: index.php?msg=Dive+started.");
 	} elseif (isset($_POST["stop"])) {
-		$result = trim(shell_exec("python3 main.py stop 2>&1"));
+		$result = trim(shell_exec("cd " . escapeshellarg(__DIR__) . " && python3 main.py stop 2>&1"));
 		file_put_contents("last_message.txt", $result);
 		header("Location: index.php?msg=Program+stopped.");
 	} elseif (isset($_POST["sample"])) {
-		$result = trim(shell_exec("python3 main.py sample 2>&1"));
+		$result = trim(shell_exec("cd " . escapeshellarg(__DIR__) . " && python3 main.py sample 2>&1"));
 		file_put_contents("last_message.txt", $result);
 		header("Location: index.php?msg=Sample+complete.");
 	} elseif (isset($_POST["battery"])) {
-		$result = trim(shell_exec("python3 main.py battery 2>&1"));
+		$result = trim(shell_exec("cd " . escapeshellarg(__DIR__) . " && python3 main.py battery 2>&1"));
 		file_put_contents("last_message.txt", $result);
 		header("Location: index.php?msg=Battery+checked.");
 	}

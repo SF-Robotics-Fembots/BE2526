@@ -13,6 +13,9 @@ import RPi.GPIO as GPIO
 import threading
 import logging
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+os.chdir(BASE_DIR)
+
 def setup_logging(rotate=False):
     if rotate and os.path.exists("buoy.log"):
         try:
@@ -404,6 +407,24 @@ def command_is_dive(args):
     has_main = any(os.path.basename(part) == main_filename for part in parts)
     return has_main and "dive" in parts
 
+def start_new_process_group():
+    try:
+        os.setsid()
+    except OSError:
+        pass
+
+def signal_dive_process(pid, sig):
+    try:
+        pgid = os.getpgid(pid)
+        if pgid == pid:
+            os.killpg(pgid, sig)
+            return "process group"
+    except OSError:
+        pass
+
+    os.kill(pid, sig)
+    return "process"
+
 def find_dive_pids():
     pids = set()
     if os.path.exists(PID_FILE):
@@ -460,8 +481,8 @@ def stop_dive():
 
     for pid in pids:
         try:
-            os.kill(pid, signal.SIGINT)
-            print(f"Ctrl+C signal sent to dive process {pid}.")
+            target = signal_dive_process(pid, signal.SIGINT)
+            print(f"Ctrl+C signal sent to dive {target} {pid}.")
         except OSError as e:
             print(f"Dive process {pid} was not running: {e}")
 
@@ -480,8 +501,8 @@ def stop_dive():
     for pid in pids:
         if is_process_running(pid):
             try:
-                os.kill(pid, signal.SIGTERM)
-                print(f"Terminate signal sent to dive process {pid}.")
+                target = signal_dive_process(pid, signal.SIGTERM)
+                print(f"Terminate signal sent to dive {target} {pid}.")
             except OSError as e:
                 print(f"Dive process {pid} could not be terminated: {e}")
 
@@ -500,8 +521,8 @@ def stop_dive():
     for pid in pids:
         if is_process_running(pid):
             try:
-                os.kill(pid, signal.SIGKILL)
-                print(f"Force killed dive process {pid}.")
+                target = signal_dive_process(pid, signal.SIGKILL)
+                print(f"Force killed dive {target} {pid}.")
             except OSError as e:
                 print(f"Dive process {pid} could not be force killed: {e}")
 
@@ -523,6 +544,7 @@ def run_button_action():
     setup_logging(rotate=action == "dive")
 
     if action == "dive":
+        start_new_process_group()
         signal.signal(signal.SIGTERM, shutdown_handler)
         signal.signal(signal.SIGINT, shutdown_handler)
         dive()
