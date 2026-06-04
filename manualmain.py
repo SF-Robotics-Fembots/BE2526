@@ -67,6 +67,16 @@ def pump(direction):
         print(msg)
         logging.info(msg)
 
+def prompt_depth(label, default):
+    while True:
+        value = input(f"{label} in cm [{default:g}]: ").strip()
+        if value == "":
+            return default
+        try:
+            return float(value)
+        except ValueError:
+            print("Please enter a number.")
+
 cycle=0.1 #seconds
 ENGINE_HEIGHT = 50.0  # cm — difference between the baseline and the bottom
 TOP_OFFSET = -17.0  # cm — top of engine is 17cm above baseline
@@ -86,6 +96,11 @@ max_shallow_speed = float(cfg["max_shallow_speed"])
 target_depth      = float(cfg["target_depth"])
 target_depth_2    = float(cfg["target_depth_2"])
 hold_duration     = float(cfg["hold_duration"])
+
+print("Manual mode: enter the two target depths. Other settings will use config.ini.")
+target_depth = prompt_depth("Target depth 1", target_depth)
+target_depth_2 = prompt_depth("Target depth 2", target_depth_2)
+
 sensor.read(ms5837.OSR_8192)
 starting_sensor_depth = sensor.depth() * 100 # convert to cm 
 
