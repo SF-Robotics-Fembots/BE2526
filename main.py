@@ -122,12 +122,30 @@ def remove_pid_file():
     except OSError:
         pass
 
+def create_stop_request():
+    try:
+        with open(STOP_FILE, "w") as f:
+            f.write(str(time.time()))
+    except OSError:
+        pass
+
+def remove_stop_request():
+    try:
+        if os.path.exists(STOP_FILE):
+            os.remove(STOP_FILE)
+    except OSError:
+        pass
+
+def stop_requested():
+    return os.path.exists(STOP_FILE)
+
 def shutdown_handler(signum=None, frame=None):
     msg = "Stop requested. Shutting down."
     print(msg)
     logging.info(msg)
     pump_stop()
     remove_pid_file()
+    remove_stop_request()
     # Keep the relay pins driven inactive so the motor cannot float back on.
     sys.exit(0)
 
@@ -139,6 +157,7 @@ REQUIRED_CONSECUTIVE = 7  # consecutive 5s readings needed within window
 DATA_FILE = "collect_data.txt"
 SAMPLE_FILE = "sample_data.txt"
 PID_FILE = "main.pid"
+STOP_FILE = "stop_dive.request"
 
 speed_divisor = 1.0
 shallow_threshold = 0.0
@@ -295,6 +314,7 @@ def data_logger():
 def dive():
     global consecutive_in_window, current_depth, target_depth, leg
 
+    remove_stop_request()
     with open(PID_FILE, "w") as f:
         f.write(str(os.getpid()))
 
@@ -309,6 +329,12 @@ def dive():
         logger_thread.start()
 
         while True:
+            if stop_requested():
+                msg = "Stop request found. Ending dive loop."
+                print(msg)
+                logging.info(msg)
+                break
+
             print("Starting Main Loop")
             current_depth = get_depth_reading()
 
@@ -347,6 +373,7 @@ def dive():
     finally:
         pump_stop()
         remove_pid_file()
+        remove_stop_request()
 
 
 def sample():
@@ -371,6 +398,12 @@ def battery_level():
     print(msg)
     logging.info(msg)
 
+def command_is_dive(args):
+    parts = args.split()
+    main_filename = os.path.basename(__file__)
+    has_main = any(os.path.basename(part) == main_filename for part in parts)
+    return has_main and "dive" in parts
+
 def find_dive_pids():
     pids = set()
     if os.path.exists(PID_FILE):
@@ -382,16 +415,24 @@ def find_dive_pids():
 
     try:
         result = subprocess.run(
-            ["pgrep", "-f", "main.py dive"],
+            ["ps", "-eo", "pid=,args="],
             capture_output=True,
             text=True,
             check=False,
         )
         for line in result.stdout.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+
             try:
-                pids.add(int(line.strip()))
+                pid_text, args = line.split(None, 1)
+                pid = int(pid_text)
             except ValueError:
-                pass
+                continue
+
+            if command_is_dive(args):
+                pids.add(pid)
     except OSError:
         pass
 
@@ -406,12 +447,15 @@ def is_process_running(pid):
         return False
 
 def stop_dive():
+    create_stop_request()
+    print("Stop request created.")
     pump_stop()
 
     pids = find_dive_pids()
     if not pids:
         print("No dive process found. Pump pins held inactive.")
         remove_pid_file()
+        remove_stop_request()
         return
 
     for pid in pids:
@@ -463,6 +507,11 @@ def stop_dive():
 
     pump_stop()
     remove_pid_file()
+    remaining = [pid for pid in pids if is_process_running(pid)]
+    if remaining:
+        print(f"Dive process still running: {remaining}. Stop request left in place.")
+    else:
+        remove_stop_request()
 
 
 def run_button_action():
