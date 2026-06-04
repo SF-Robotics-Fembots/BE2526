@@ -474,9 +474,8 @@ def stop_dive():
 
     pids = find_dive_pids()
     if not pids:
-        print("No dive process found. Pump pins held inactive.")
+        print("No dive process found. Stop request left in place.")
         remove_pid_file()
-        remove_stop_request()
         return
 
     for pid in pids:

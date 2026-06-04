@@ -6,6 +6,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 		exec("cd " . escapeshellarg(__DIR__) . " && python3 main.py dive > /dev/null 2>&1 &");
 		header("Location: index.php?msg=Dive+started.");
 	} elseif (isset($_POST["stop"])) {
+		file_put_contents(__DIR__ . "/stop_dive.request", time());
 		$result = trim(shell_exec("cd " . escapeshellarg(__DIR__) . " && python3 main.py stop 2>&1"));
 		file_put_contents("last_message.txt", $result);
 		header("Location: index.php?msg=Program+stopped.");
