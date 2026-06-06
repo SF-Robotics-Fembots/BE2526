@@ -43,9 +43,13 @@ DEBUG = 1
 
 GPIO_IN = 5
 GPIO_OUT = 6
+LOW_BATTERY_LED_GPIO = 11  # BCM GPIO 11
+LOW_BATTERY_THRESHOLD = 7.5
 RELAY_ACTIVE_LOW = False
 RELAY_ACTIVE_LEVEL = GPIO.LOW if RELAY_ACTIVE_LOW else GPIO.HIGH
 RELAY_INACTIVE_LEVEL = GPIO.HIGH if RELAY_ACTIVE_LOW else GPIO.LOW
+LOW_BATTERY_LED_ON = GPIO.HIGH
+LOW_BATTERY_LED_OFF = GPIO.LOW
 
 # Set the GPIO mode (BOARD)
 GPIO.setwarnings(False)
@@ -55,6 +59,7 @@ GPIO.setmode(GPIO.BCM)
 # Set the relay pin as an output pin
 GPIO.setup(GPIO_IN, GPIO.OUT)
 GPIO.setup(GPIO_OUT, GPIO.OUT)
+GPIO.setup(LOW_BATTERY_LED_GPIO, GPIO.OUT, initial=LOW_BATTERY_LED_OFF)
 GPIO.output(GPIO_IN, RELAY_INACTIVE_LEVEL)
 GPIO.output(GPIO_OUT, RELAY_INACTIVE_LEVEL)
 
@@ -410,7 +415,10 @@ def battery_level():
         logging.exception(msg)
         return
 
-    msg = f"Battery level: {voltage:.3f} volts"
+    is_low = voltage < LOW_BATTERY_THRESHOLD
+    GPIO.output(LOW_BATTERY_LED_GPIO, LOW_BATTERY_LED_ON if is_low else LOW_BATTERY_LED_OFF)
+
+    msg = f"Battery level: {voltage:.3f} volts. Low battery LED {'ON' if is_low else 'OFF'}."
     print(msg)
     logging.info(msg)
 
