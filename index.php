@@ -15,8 +15,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 		file_put_contents("last_message.txt", $result);
 		header("Location: index.php?msg=Sample+complete.");
 	} elseif (isset($_POST["battery"])) {
-		exec("cd " . escapeshellarg(__DIR__) . " && python3 main.py battery > /dev/null 2>&1 &");
-		header("Location: index.php?msg=Battery+monitor+started.");
+		$result = trim(shell_exec("cd " . escapeshellarg(__DIR__) . " && python3 main.py battery 2>&1"));
+		file_put_contents("last_message.txt", $result);
+		header("Location: index.php?msg=" . urlencode($result));
 	}
 	exit;
 }
