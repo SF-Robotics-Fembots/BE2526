@@ -43,9 +43,14 @@ DEBUG = 1
 
 GPIO_IN = 5
 GPIO_OUT = 6
+LOW_BATTERY_LED_GPIO = 11  # BCM GPIO 11
+LOW_BATTERY_THRESHOLD = 7.0
+BATTERY_CHECK_INTERVAL = 1.0
 RELAY_ACTIVE_LOW = False
 RELAY_ACTIVE_LEVEL = GPIO.LOW if RELAY_ACTIVE_LOW else GPIO.HIGH
 RELAY_INACTIVE_LEVEL = GPIO.HIGH if RELAY_ACTIVE_LOW else GPIO.LOW
+LOW_BATTERY_LED_ON = GPIO.HIGH
+LOW_BATTERY_LED_OFF = GPIO.LOW
 
 # Set the GPIO mode (BOARD)
 GPIO.setwarnings(False)
@@ -55,6 +60,7 @@ GPIO.setmode(GPIO.BCM)
 # Set the relay pin as an output pin
 GPIO.setup(GPIO_IN, GPIO.OUT)
 GPIO.setup(GPIO_OUT, GPIO.OUT)
+GPIO.setup(LOW_BATTERY_LED_GPIO, GPIO.OUT, initial=LOW_BATTERY_LED_OFF)
 GPIO.output(GPIO_IN, RELAY_INACTIVE_LEVEL)
 GPIO.output(GPIO_OUT, RELAY_INACTIVE_LEVEL)
 
@@ -125,6 +131,13 @@ def remove_pid_file():
     except OSError:
         pass
 
+def remove_battery_pid_file():
+    try:
+        if os.path.exists(BATTERY_PID_FILE):
+            os.remove(BATTERY_PID_FILE)
+    except OSError:
+        pass
+
 def create_stop_request():
     try:
         with open(STOP_FILE, "w") as f:
@@ -161,6 +174,7 @@ DATA_FILE = "collect_data.txt"
 SAMPLE_FILE = "sample_data.txt"
 PID_FILE = "main.pid"
 STOP_FILE = "stop_dive.request"
+BATTERY_PID_FILE = "battery_monitor.pid"
 
 speed_divisor = 1.0
 shallow_threshold = 0.0
@@ -396,10 +410,68 @@ def sample():
     logging.info(msg)
 
 
+def pid_is_running(pid):
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+def battery_monitor_is_running():
+    if not os.path.exists(BATTERY_PID_FILE):
+        return False
+
+    try:
+        with open(BATTERY_PID_FILE, "r") as f:
+            pid = int(f.read().strip())
+    except (OSError, ValueError):
+        remove_battery_pid_file()
+        return False
+
+    if pid_is_running(pid):
+        return True
+
+    remove_battery_pid_file()
+    return False
+
 def battery_level():
-    msg = "Battery level: 5.7 volts"
+    if battery_monitor_is_running():
+        msg = "Battery monitor is already running."
+        print(msg)
+        logging.info(msg)
+        return
+
+    try:
+        import board
+        import adafruit_ina228
+
+        i2c = board.I2C()
+        ina = adafruit_ina228.INA228(i2c)
+    except Exception as e:
+        msg = f"Battery monitor failed to start: {e}"
+        print(msg)
+        logging.exception(msg)
+        return
+
+    with open(BATTERY_PID_FILE, "w") as f:
+        f.write(str(os.getpid()))
+
+    msg = "Battery monitor started."
     print(msg)
     logging.info(msg)
+
+    try:
+        while True:
+            voltage = ina.bus_voltage
+            is_low = voltage < LOW_BATTERY_THRESHOLD
+            GPIO.output(LOW_BATTERY_LED_GPIO, LOW_BATTERY_LED_ON if is_low else LOW_BATTERY_LED_OFF)
+
+            msg = f"Battery level: {voltage:.3f} volts. Low battery LED {'ON' if is_low else 'OFF'}."
+            print(msg)
+            logging.info(msg)
+            time.sleep(BATTERY_CHECK_INTERVAL)
+    finally:
+        remove_battery_pid_file()
 
 def command_is_dive(args):
     parts = args.split()

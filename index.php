@@ -15,9 +15,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 		file_put_contents("last_message.txt", $result);
 		header("Location: index.php?msg=Sample+complete.");
 	} elseif (isset($_POST["battery"])) {
-		$result = trim(shell_exec("cd " . escapeshellarg(__DIR__) . " && python3 main.py battery 2>&1"));
-		file_put_contents("last_message.txt", $result);
-		header("Location: index.php?msg=Battery+checked.");
+		exec("cd " . escapeshellarg(__DIR__) . " && python3 main.py battery > /dev/null 2>&1 &");
+		header("Location: index.php?msg=Battery+monitor+started.");
 	}
 	exit;
 }
@@ -95,11 +94,11 @@ if (file_exists($sampleFile)) {
 }
 ?>
 
-<div class = "battery_bttn">
-	<form action="index.php" method="post">
-		<INPUT TYPE="submit" value="battery" name="battery">
-	</form>
-</div>
+	<div class = "battery_bttn">
+		<form action="index.php" method="post">
+			<INPUT TYPE="submit" value="Check Battery" name="battery">
+		</form>
+	</div>
 
 <?php if ($buttonMessage !== "") { ?>
 	<p><?php echo htmlspecialchars($buttonMessage); ?></p>
