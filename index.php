@@ -129,6 +129,8 @@ echo '<table>';
 echo '<tr><th>COMPANY NAME</th><th>TIME</th><th>BASELINE</th><th>DEPTH (TOP)</th><th>DEPTH (BOTTOM)</th><th>IN WINDOW</th></tr>';
 
 $depth = array();
+$depthTop = array();
+$depthBottom = array();
 $time = array();
 $rows = array();
 
@@ -145,6 +147,8 @@ if(flock($file, LOCK_SH)) {
 	     }
        	     array_push($time, $parts[1]);
        	     array_push($depth, $parts[2]);
+       	     array_push($depthTop, $parts[3]);
+       	     array_push($depthBottom, $parts[4]);
 	     $inWindowText = trim($parts[5]);
 	     $inWindowCount = intval(explode("/", $inWindowText)[0]);
 	     $rows[] = array(
@@ -179,7 +183,7 @@ if(flock($file, LOCK_SH)) {
 	     foreach ($rows as $row) {
 		     $parts = $row["parts"];
 		     $rowClass = $row["highlight"] ? ' class="in-window-packet"' : '';
-		     echo '<tr' . $rowClass . '><td height=70>' . htmlspecialchars($parts[0]) . '</td><td height=70>' . htmlspecialchars($parts[1]) . ' s</td><td height=70>' . htmlspecialchars($parts[2]) . ' cm</td><td height=70>' . htmlspecialchars($parts[3]) . ' cm</td><td height=70>' . htmlspecialchars($parts[4]) . ' cm</td><td height=70>' . htmlspecialchars($row["in_window_text"]) . '</td></tr>';
+		     echo '<tr' . $rowClass . '><td height=70>' . htmlspecialchars($parts[0]) . '</td><td height=70>' . htmlspecialchars($parts[1]) . ' s</td><td height=70>Baseline: ' . htmlspecialchars($parts[2]) . ' cm</td><td height=70>Top: ' . htmlspecialchars($parts[3]) . ' cm</td><td height=70>Bottom: ' . htmlspecialchars($parts[4]) . ' cm</td><td height=70>' . htmlspecialchars($row["in_window_text"]) . '</td></tr>';
 	     }
              echo '</table>';
            /*  fclose($file); */
@@ -198,21 +202,38 @@ fclose($file);
      <script>
 	var passedTime = <?php echo json_encode($time); ?>;
 	var passedDepth = <?php echo json_encode($depth); ?>;
+	var passedDepthTop = <?php echo json_encode($depthTop); ?>;
+	var passedDepthBottom = <?php echo json_encode($depthBottom); ?>;
 
         new Chart("myChart", {
         type: "line",
         data: {
             labels: passedTime,
             datasets: [{
+            label: "Baseline",
             fill: false,
             lineTension: 0,
             backgroundColor: "rgba(0,0,255,1.0)",
-            borderColor: "rgba(0,0,255,0.1)",
+            borderColor: "rgba(0,0,255,1.0)",
             data: passedDepth
+            },{
+            label: "Top of buoyancy engine",
+            fill: false,
+            lineTension: 0,
+            backgroundColor: "rgba(0,200,0,1.0)",
+            borderColor: "rgba(0,200,0,1.0)",
+            data: passedDepthTop
+            },{
+            label: "Bottom of buoyancy engine",
+            fill: false,
+            lineTension: 0,
+            backgroundColor: "rgba(255,0,0,1.0)",
+            borderColor: "rgba(255,0,0,1.0)",
+            data: passedDepthBottom
             }]
         },
         options: {
-            plugins: { legend: {display: false},},
+            plugins: { legend: {display: true},},
 	    layout: { padding: { top: 50 } },
             scales: {
 		y: {
