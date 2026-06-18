@@ -89,7 +89,7 @@ if (file_exists($sampleFile)) {
 	if (count($sampleParts) >= 6) {
 		echo '<table>';
 		echo '<tr><th>COMPANY NAME</th><th>TIME</th><th>BASELINE</th><th>DEPTH (TOP)</th><th>DEPTH (BOTTOM)</th><th>SAMPLE</th></tr>';
-		echo '<tr><td height=70>' . htmlspecialchars($sampleParts[0]) . '</td><td height=70>' . htmlspecialchars($sampleParts[1]) . ' s</td><td height=70>' . htmlspecialchars($sampleParts[2]) . ' cm</td><td height=70>' . htmlspecialchars($sampleParts[3]) . ' cm</td><td height=70>' . htmlspecialchars($sampleParts[4]) . ' cm</td><td height=70>' . htmlspecialchars($sampleParts[5]) . '</td></tr>';
+		echo '<tr><td height=70>' . htmlspecialchars('0371A/EX24/Geneseas') . '</td><td height=70>' . htmlspecialchars($sampleParts[1]) . ' s</td><td height=70>' . htmlspecialchars($sampleParts[2]) . ' cm</td><td height=70>' . htmlspecialchars($sampleParts[3]) . ' cm</td><td height=70>' . htmlspecialchars($sampleParts[4]) . ' cm</td><td height=70>' . htmlspecialchars($sampleParts[5]) . '</td></tr>';
 		echo '</table>';
 	}
 }
@@ -183,7 +183,7 @@ if(flock($file, LOCK_SH)) {
 	     foreach ($rows as $row) {
 		     $parts = $row["parts"];
 		     $rowClass = $row["highlight"] ? ' class="in-window-packet"' : '';
-		     echo '<tr' . $rowClass . '><td height=70>' . htmlspecialchars($parts[0]) . '</td><td height=70>' . htmlspecialchars($parts[1]) . ' s</td><td height=70>Baseline: ' . htmlspecialchars($parts[2]) . ' cm</td><td height=70>Top: ' . htmlspecialchars($parts[3]) . ' cm</td><td height=70>Bottom: ' . htmlspecialchars($parts[4]) . ' cm</td><td height=70>' . htmlspecialchars($row["in_window_text"]) . '</td></tr>';
+		     echo '<tr' . $rowClass . '><td height=70>' . htmlspecialchars('0371A/EX24/Geneseas') . '</td><td height=70>' . htmlspecialchars($parts[1]) . ' s</td><td height=70>Baseline: ' . htmlspecialchars($parts[2]) . ' cm</td><td height=70>Top: ' . htmlspecialchars($parts[3]) . ' cm</td><td height=70>Bottom: ' . htmlspecialchars($parts[4]) . ' cm</td><td height=70>' . htmlspecialchars($row["in_window_text"]) . '</td></tr>';
 	     }
              echo '</table>';
            /*  fclose($file); */
